@@ -280,6 +280,7 @@ scene.add(sky);
 
 const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 900);
 const controls = new OrbitControls(camera, canvas);
+window.__garden = { camera, controls }; // handle for checking close-up views from the browser console
 controls.enableDamping = true;
 controls.maxPolarAngle = 86 * deg;
 controls.minDistance = 3;
@@ -317,12 +318,13 @@ const T = {};
 function gravel(base, cols) { const [c, x] = cnv(256); noiseFill(x, 256, 256, base, 22); specks(x, 256, 256, cols, 3000, 2.4); return toTex(c); }
 T.dg = gravel([186, 170, 138], ['#efe6d4', '#8c7d66', '#b9a789', '#6e6352']);
 T.gravel = gravel([168, 160, 148], ['#e9e4da', '#7c766c', '#a99f90', '#5d5852']);
-{ const [c, x] = cnv(256); noiseFill(x, 256, 256, [156, 152, 144], 12); specks(x, 256, 256, ['#f3efe8', '#5e5a55', '#a08f7a', '#cbc3b5', '#3f3d3a', '#8e6f57'], 4200, 2.2); T.agg = toTex(c); }
+{ const [c, x] = cnv(256); noiseFill(x, 256, 256, [192, 190, 184], 12); specks(x, 256, 256, ['#fbf9f4', '#f0ede6', '#6a6660', '#a8a29a', '#cfcac2', '#45423f', '#8e8274'], 5200, 2.2); T.agg = toTex(c); }
 function pavers(base, joint, n = 2, varyAmt = 18) { const [c, x] = cnv(256); x.fillStyle = joint; x.fillRect(0, 0, 256, 256); const s = 256 / n;
   for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const t = (rnd() - 0.5) * varyAmt; x.fillStyle = `rgb(${base[0]+t},${base[1]+t},${base[2]+t*1.1})`; x.fillRect(i*s+2, j*s+2, s-4, s-4); }
   specks(x, 256, 256, ['rgba(255,255,255,0.07)', 'rgba(0,0,0,0.08)'], 1600, 2); return toTex(c); }
 T.blue = pavers([112, 118, 122], '#8e9294');
-T.paleTile = pavers([222, 214, 196], '#c4baa6', 2, 10);
+// pale limestone verandah tiles, long rectangles in running bond (IMG_0688)
+{ const [c, x] = cnv(256); x.fillStyle = '#b9b3a6'; x.fillRect(0, 0, 256, 256); for (let r = 0; r < 4; r++) for (let k = -1; k < 3; k++) { const t = (rnd() - 0.5) * 10; x.fillStyle = `rgb(${214+t},${210+t},${199+t})`; x.fillRect(k * 128 + (r % 2) * 64 + 1, r * 64 + 1, 126, 62); } specks(x, 256, 256, ['rgba(255,255,255,0.10)', 'rgba(110,100,80,0.10)'], 1600, 3); T.paleTile = toTex(c); }
 function crazy(base, grout) { const n = 256, k = 6, pts = [];
   for (let i = 0; i < k; i++) for (let j = 0; j < k; j++) pts.push([(i + 0.15 + 0.7 * rnd()) * n / k, (j + 0.15 + 0.7 * rnd()) * n / k, (rnd() - 0.5) * 34]);
   const all = []; for (const p of pts) for (const ox of [-n, 0, n]) for (const oy of [-n, 0, n]) all.push([p[0] + ox, p[1] + oy, p[2]]);
@@ -333,16 +335,16 @@ function crazy(base, grout) { const n = 256, k = 6, pts = [];
     const col = edge ? grout : [base[0] + sh + v, base[1] + sh + v, base[2] + sh * 1.1 + v]; const o = (py * n + px) * 4; img.data[o] = col[0]; img.data[o+1] = col[1]; img.data[o+2] = col[2]; img.data[o+3] = 255; }
   x.putImageData(img, 0, 0); return toTex(c); }
 T.crazy = crazy([110, 114, 118], [160, 156, 148]);
-T.flag = crazy([124, 126, 128], [92, 92, 90]);
-{ const [c, x] = cnv(256); x.fillStyle = '#9d8f84'; x.fillRect(0, 0, 256, 256); for (let r = 0; r < 8; r++) for (let k = -1; k < 5; k++) { const t = (rnd() - 0.5) * 34; x.fillStyle = `rgb(${142+t},${64+t*0.5},${50+t*0.4})`; x.fillRect(k * 64 + (r % 2) * 32 + 2, r * 32 + 2, 60, 28); } T.brick = toTex(c); }
-{ const [c, x] = cnv(256); noiseFill(x, 256, 256, [206, 197, 180], 8); specks(x, 256, 256, ['rgba(255,255,255,0.12)', 'rgba(0,0,0,0.05)'], 1200, 3); T.render = toTex(c); }
+T.flag = crazy([106, 112, 120], [168, 165, 158]); // bluestone crazy paving with pale grout (IMG_0689)
+{ const [c, x] = cnv(256); x.fillStyle = '#4b4636'; x.fillRect(0, 0, 256, 256); for (let r = 0; r < 8; r++) for (let k = -1; k < 5; k++) { const t = (rnd() - 0.5) * 34, burnt = rnd() < 0.2; x.fillStyle = burnt ? `rgb(${92+t},${74+t},${62+t})` : `rgb(${176+t},${82+t*0.5},${66+t*0.4})`; x.fillRect(k * 64 + (r % 2) * 32 + 2, r * 32 + 2, 60, 28); } specks(x, 256, 256, ['rgba(255,235,210,0.12)', 'rgba(30,25,20,0.18)'], 1400, 2); T.brick = toTex(c); }
+{ const [c, x] = cnv(256); noiseFill(x, 256, 256, [224, 218, 198], 7); specks(x, 256, 256, ['rgba(255,255,255,0.12)', 'rgba(0,0,0,0.05)'], 1200, 3); T.render = toTex(c); }
 { const [c, x] = cnv(256); noiseFill(x, 256, 256, [204, 198, 184], 6); for (let i = 0; i < 8; i++) { const y = i * 32; x.fillStyle = 'rgba(70,62,50,0.38)'; x.fillRect(0, y + 29, 256, 3); x.fillStyle = 'rgba(255,255,255,0.18)'; x.fillRect(0, y, 256, 2); } T.wb = toTex(c); }
 { const [c, x] = cnv(256); noiseFill(x, 256, 256, [200, 191, 174], 8); for (let i = 0; i < 8; i++) { x.fillStyle = 'rgba(80,70,58,0.5)'; x.fillRect(0, i * 32 + 29, 256, 3); } T.quoin = toTex(c); }
 { const [c, x] = cnv(256); noiseFill(x, 256, 256, [92, 90, 92], 10); for (let r = 0; r < 4; r++) { const y = r * 64; for (let k = -1; k < 9; k++) { const t = (rnd() - 0.5) * 22; x.fillStyle = `rgb(${88+t},${87+t},${92+t})`; x.fillRect(k * 32 + (r % 2) * 16 + 1, y + 2, 30, 61); } x.fillStyle = 'rgba(20,20,24,0.55)'; x.fillRect(0, y + 60, 256, 4); } T.slate = toTex(c); }
 { const [c, x] = cnv(128); for (let i = 0; i < 128; i++) { const v = 118 + 22 * Math.sin(i / 128 * Math.PI * 2 * 8); x.fillStyle = `rgb(${v},${v+2},${v+5})`; x.fillRect(i, 0, 1, 128); } T.corr = toTex(c); }
 { const [c, x] = cnv(256); x.fillStyle = '#3d3a37'; x.fillRect(0, 0, 256, 256); for (let r = 0; r < 20; r++) { let px = 0; const y = r * 12.8; while (px < 256) { const w = 14 + rnd() * 40; x.fillStyle = pick(['#6b5546', '#55453b', '#7a6250', '#4b4a49', '#8a6f5a', '#5f574f']); x.fillRect(px + 1, y + 1, w - 2, 10.8); px += w; } } T.stack = toTex(c); }
 { const [c, x] = cnv(64); x.fillStyle = '#d9dcdc'; x.fillRect(0, 0, 64, 64); for (let i = 0; i < 64; i += 6) { x.fillStyle = 'rgba(60,65,70,0.45)'; x.fillRect(0, i, 64, 2); } x.fillStyle = '#bfc4c6'; x.fillRect(30, 0, 4, 64); T.shutter = toTex(c); }
-{ const [c, x] = cnv(256); x.fillStyle = '#6f665e'; x.fillRect(0, 0, 256, 256); for (let i = 0; i < 5; i++) { x.fillStyle = 'rgba(30,26,22,0.45)'; x.fillRect(0, i * 51 + 48, 256, 3); x.fillStyle = 'rgba(255,255,255,0.06)'; x.fillRect(0, i * 51, 256, 2); } T.garage = toTex(c); }
+{ const [c, x] = cnv(256); x.fillStyle = '#4a4846'; x.fillRect(0, 0, 256, 256); for (let i = 0; i < 5; i++) { x.fillStyle = 'rgba(20,20,20,0.45)'; x.fillRect(0, i * 51 + 48, 256, 3); x.fillStyle = 'rgba(255,255,255,0.06)'; x.fillRect(0, i * 51, 256, 2); } T.garage = toTex(c); }
 { const [c, x] = cnv(256, 64); x.clearRect(0, 0, 256, 64); x.strokeStyle = '#3a312b'; x.fillStyle = '#3a312b'; x.lineWidth = 2.6;
   x.fillRect(0, 0, 256, 6); x.fillRect(0, 20, 256, 3);
   for (let i = 0; i < 8; i++) { const cx = i * 32 + 16; for (let k = 0; k < 3; k++) { x.beginPath(); x.arc(cx, 13, 3 + k * 0.1, 0, 6.3); x.stroke(); } x.beginPath(); x.moveTo(cx - 12, 8); x.quadraticCurveTo(cx, 22, cx + 12, 8); x.stroke();
@@ -366,13 +368,13 @@ const MAT = {
   blue: tmat(T.blue, 1.2), crazy: tmat(T.crazy, 2.4), flag: tmat(T.flag, 2.6), brick: tmat(T.brick, 1.0), paleTile: tmat(T.paleTile, 1.2),
   road: mat(0x4a4c4f, { roughness: 1 }), footpath: mat(0xbfbab0), verge: tmat(T.lawn, 2.4), outside: mat(0x8d9a74, { roughness: 1 }), kerb: mat(0xa9a59c),
   render: tmat(T.render, 2.0), wb: tmat(T.wb, 1.44), quoin: tmat(T.quoin, 1.2, { color: 0xf2ede4 }), slate: tmat(T.slate, 1.0, { flatShading: true, side: THREE.DoubleSide, roughness: 0.75 }),
-  trim: mat(0x847b6d), trimDark: mat(0x5f584f), cornice: mat(0xe0d8c8), glass: mat(0x2b3439, { roughness: 0.12, metalness: 0.4 }),
+  trim: mat(0x847b6d), trimDark: mat(0x5f584f), cornice: mat(0xe9e3d0), glass: mat(0x2b3439, { roughness: 0.12, metalness: 0.4 }),
   shutter: tmat(T.shutter, 1, { roughness: 0.6 }), door: mat(0x3d3a36, { roughness: 0.6 }), garage: tmat(T.garage, 2.4, { roughness: 0.6 }), iron: mat(0x2f2925, { roughness: 0.55, metalness: 0.3 }),
   timber: mat(0x7d553a, { roughness: 0.75 }), timberLight: mat(0xa77d55, { roughness: 0.8 }), sleeper: mat(0x8b7a62, { roughness: 0.95 }),
   fenceBlack: tmat(T.blackBoard, 1.0, { roughness: 0.85 }), black: mat(0x2a2928, { roughness: 0.8 }), paling: tmat(T.paling, 1.0),
   stone: mat(0xbdb6a8), stoneDark: mat(0x9a948a), water: mat(0x2f5a5f, { roughness: 0.06, metalness: 0.25, transparent: true, opacity: 0.9 }),
   pool: mat(0x49b0cf, { roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.92 }), poolTile: mat(0x7fc4d6, { roughness: 0.4 }), stack: tmat(T.stack, 1.2),
-  bin: mat(0x2f3a33), binLid: mat(0x3c8a4a), corr: tmat(T.corr, 0.8, { roughness: 0.55, metalness: 0.2, side: THREE.DoubleSide, color: 0x9a9da0 }), lining: mat(0xe8e2d6, { side: THREE.DoubleSide }),
+  bin: mat(0x2f3a33), binLid: mat(0x3c8a4a), corr: tmat(T.corr, 0.8, { roughness: 0.55, metalness: 0.2, side: THREE.DoubleSide, color: 0x4f5357 }), lining: mat(0xe8e2d6, { side: THREE.DoubleSide }),
   lace: new THREE.MeshStandardMaterial({ map: T.lace, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.6 }),
   bracket: new THREE.MeshStandardMaterial({ map: T.bracket, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.6 }),
   ironGate: new THREE.MeshStandardMaterial({ map: T.iron, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.3 }),
@@ -447,11 +449,14 @@ function block(x0, y0, x1, y1, eave, group, { wm = MAT.render, base = GL, o = 0.
   box((x0 + x1) / 2, (y0 + y1) / 2, base, x1 - x0, y1 - y0, eave - base, wm, group);
   if (plinth) box((x0 + x1) / 2, (y0 + y1) / 2, base, x1 - x0 + 0.06, y1 - y0 + 0.06, 0.35, MAT.stoneDark, group, { cast: false });
   if (cornice) box((x0 + x1) / 2, (y0 + y1) / 2, eave - 0.32, x1 - x0 + 0.14, y1 - y0 + 0.14, 0.24, MAT.cornice, group, { cast: false });
-  box((x0 + x1) / 2, (y0 + y1) / 2, eave - 0.1, x1 - x0 + 2 * o, y1 - y0 + 2 * o, 0.16, MAT.trimDark, group, { cast: false });
+  box((x0 + x1) / 2, (y0 + y1) / 2, eave - 0.1, x1 - x0 + 2 * o, y1 - y0 + 2 * o, 0.16, MAT.trim, group, { cast: false }); // taupe gutter and fascia (IMG_0693, IMG_0694)
   hipRoof(x0, y0, x1, y1, eave + 0.04, group, { o, pitch, m: rm });
 }
-function quoins(x, y, base, top, group) { box(x, y, base, 0.36, 0.36, top - base, MAT.quoin, group, { cast: false }); }
-function chimney(x, y, base, h, group) { box(x, y, base, 0.85, 0.6, h, MAT.render, group); box(x, y, base + h, 1.0, 0.75, 0.2, MAT.cornice, group); [-0.2, 0.2].forEach(d => { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.4, 10), mat(0xa65d40)); p.position.set(x + d, base + h + 0.4, y); p.castShadow = true; group.add(p); }); }
+// raised rendered quoins, alternating long and short blocks on each face (IMG_0693, IMG_0694)
+function quoins(x, y, base, top, group, sx, sy) { const hB = 0.27, gap = 0.06, t = 0.035; let i = 0; // sx, sy: directions along the two walls, away from the corner
+  for (let z = base + (base < FLOOR ? 0.35 : 0.03); z + hB <= top + 0.001; z += hB + gap, i++) { const a = i % 2 ? 0.3 : 0.5, b = i % 2 ? 0.5 : 0.3;
+    box(x + sx * (a - t) / 2, y, z, a + t, 2 * t, hB, MAT.cornice, group, { cast: false }); box(x, y + sy * (b - t) / 2, z, 2 * t, b + t, hB, MAT.cornice, group, { cast: false }); } }
+function chimney(x, y, base, h, group) { box(x, y, base, 0.85, 0.6, h, MAT.render, group); box(x, y, base + h - 0.35, 0.95, 0.7, 0.12, MAT.cornice, group); box(x, y, base + h, 1.0, 0.75, 0.2, MAT.cornice, group); box(x, y, base + h + 0.2, 0.8, 0.55, 0.12, MAT.render, group); } // rendered stack, moulded cap, no pots (IMG_0693, IMG_0694)
 // Window/door built facing +z in local space; placed on a wall with rotY (0:+z street side, -PI/2:-x north, PI/2:+x south, PI:-z rear).
 function opening(group, cx, cz, yb, w, h, rotY, { kind = 'sash', arch = false, shutter = false, sill = true } = {}) {
   const g = new THREE.Group(); g.position.set(cx, yb, cz); g.rotation.y = rotY;
@@ -460,8 +465,11 @@ function opening(group, cx, cz, yb, w, h, rotY, { kind = 'sash', arch = false, s
   const glassM = kind === 'door' ? MAT.door : shutter ? MAT.shutter : MAT.glass;
   add(new THREE.PlaneGeometry(w, h), glassM, 0, h / 2, 0.01);
   if (arch) { const a = add(new THREE.CircleGeometry(w / 2, 20, 0, Math.PI), MAT.glass, 0, h, 0.01); }
-  add(new THREE.BoxGeometry(w + 2 * fr, fr, pr), MAT.cornice, 0, h + (arch ? w / 2 : 0) + fr / 2, pr / 2);
-  add(new THREE.BoxGeometry(fr, h, pr), MAT.cornice, -w / 2 - fr / 2, h / 2, pr / 2); add(new THREE.BoxGeometry(fr, h, pr), MAT.cornice, w / 2 + fr / 2, h / 2, pr / 2);
+  const fm = kind === 'door' ? MAT.cornice : MAT.trim, hh = h + (arch ? w / 2 : 0);
+  add(new THREE.BoxGeometry(w + 2 * fr, fr, pr), fm, 0, hh + fr / 2, pr / 2);
+  add(new THREE.BoxGeometry(fr, h, pr), fm, -w / 2 - fr / 2, h / 2, pr / 2); add(new THREE.BoxGeometry(fr, h, pr), fm, w / 2 + fr / 2, h / 2, pr / 2);
+  if (kind !== 'door') { const aw = 0.1; add(new THREE.BoxGeometry(aw, hh + fr, 0.07), MAT.cornice, -w / 2 - fr - aw / 2, (hh + fr) / 2, 0.035); add(new THREE.BoxGeometry(aw, hh + fr, 0.07), MAT.cornice, w / 2 + fr + aw / 2, (hh + fr) / 2, 0.035);
+    add(new THREE.BoxGeometry(w + 2 * fr + 2 * aw + 0.14, 0.14, 0.09), MAT.cornice, 0, hh + fr + 0.07, 0.045); }
   if (sill && kind !== 'door') add(new THREE.BoxGeometry(w + 0.3, 0.07, 0.14), MAT.cornice, 0, -0.035, 0.07);
   if (kind === 'sash' || kind === 'french') { add(new THREE.BoxGeometry(w, 0.045, 0.03), MAT.trim, 0, kind === 'sash' ? h * 0.52 : h * 0.78, 0.025); add(new THREE.BoxGeometry(0.04, h, 0.03), MAT.trim, 0, h / 2, 0.025); }
   if (kind === 'door') { add(new THREE.PlaneGeometry(w * 0.8, 0.42), MAT.glass, 0, h + 0.28, 0.01); add(new THREE.BoxGeometry(w + 0.2, 0.06, 0.06), MAT.cornice, 0, h + 0.04, 0.03); add(new THREE.SphereGeometry(0.03, 8, 6), mat(0xb08d57, { metalness: 0.6, roughness: 0.3 }), w * 0.32, 1.0, 0.04); }
@@ -619,17 +627,16 @@ block(36.4, 29.5, 39.4, 37.6, EAVE1, H, { wm: MAT.wb, cornice: false });        
 (function sunroom() { const x0 = 28.2, x1 = 32.3, y0 = 45.5, y1 = 47.55, top = FLOOR + 2.55;
   slab(rect(x0, y0, x1, y1), GL, FLOOR + 0.45, MAT.render, H, { walk: false, cast: true });
   glazedWall(H, [x0, y1], [x1, y1], FLOOR + 0.45, top); glazedWall(H, [x0, y0], [x0, y1], FLOOR + 0.45, top); glazedWall(H, [x1, y0], [x1, y1], FLOOR + 0.45, top);
-  box((x0 + x1) / 2, (y0 + y1) / 2, top, x1 - x0 + 0.3, y1 - y0 + 0.3, 0.18, MAT.trimDark, H, { cast: false });
+  box((x0 + x1) / 2, (y0 + y1) / 2, top, x1 - x0 + 0.3, y1 - y0 + 0.3, 0.18, MAT.trim, H, { cast: false });
   hipRoof(x0, y0, x1, y1, top + 0.18, H, { o: 0.3, pitch: 26 * deg }); })();
-// quoins on rendered corners
-[[23.1, 46.4], [26.7, 46.4], [22.3, 45.4], [20.21, 45.4], [32.94, 44.6], [39.4, 44.6], [27.7, 45.4], [32.94, 45.4]].forEach(([x, y]) => quoins(x, y, GL, EAVE1 - 0.32, H));
-[[27.7, 45.4], [32.94, 45.4], [27.7, 30.1], [32.94, 30.1]].forEach(([x, y]) => quoins(x, y, EAVE1 - 0.32, EAVE2 - 0.32, H));
+// quoins on rendered corners (the study bay has plain corners, IMG_0693)
+[[20.21, 45.4, 1, -1], [32.94, 44.6, 1, -1], [39.4, 44.6, -1, -1], [27.7, 45.4, 1, -1], [32.94, 45.4, -1, -1]].forEach(([x, y, sx, sy]) => quoins(x, y, GL, EAVE1 - 0.32, H, sx, sy));
+[[27.7, 45.4, 1, -1], [32.94, 45.4, -1, -1], [27.7, 30.1, 1, 1], [32.94, 30.1, -1, 1]].forEach(([x, y, sx, sy]) => quoins(x, y, EAVE1 - 0.32, EAVE2 - 0.32, H, sx, sy));
 chimney(30.3, 43.6, EAVE2, 2.2, H); chimney(30.3, 31.6, EAVE2, 2.2, H); chimney(17.6, 36.5, EAVE1, 3.0, H); chimney(24.6, 33.3, EAVE1, 2.9, H); chimney(14.2, 30.6, EAVE1, 2.6, H);
 // windows and doors (street side faces +z)
 [23.75, 24.9, 26.05].forEach(x => opening(H, x, 46.42, FLOOR + 0.45, 0.62, 1.95, 0, { shutter: true }));
-opening(H, 21.25, 45.42, FLOOR + 0.55, 0.85, 1.75, 0, { shutter: true });
-opening(H, 30.3, 45.42, FLOOR + 3.3, 0.8, 1.35, 0, { arch: true });
-[29.0, 31.6].forEach(x => opening(H, x, 45.42, FLOOR + 3.4, 0.7, 1.3, 0, { shutter: true }));
+opening(H, 21.45, 45.42, FLOOR + 0.6, 0.95, 1.6, 0, { sill: false });
+opening(H, 30.3, 45.42, FLOOR + 3.3, 0.95, 1.8, 0); // the wing's street face has one upper sash, centred (2017 west elevation, IMG_0694)
 [42.6, 38.2, 33.8].forEach(z => opening(H, 27.68, z, FLOOR + 3.4, 0.8, 1.4, -Math.PI / 2, { shutter: true }));
 opening(H, 19.2, 43.08, FLOOR, 1.05, 2.3, 0, { kind: 'door' }); [16.1, 17.7].forEach(x => opening(H, x, 43.08, FLOOR, 1.05, 2.3, 0, { kind: 'french' }));
 [38.2, 41.0].forEach(z => opening(H, 14.8, z, FLOOR, 1.1, 2.3, -Math.PI / 2, { kind: 'french' }));
@@ -643,7 +650,7 @@ opening(H, 27.68, 31.4, FLOOR + 0.4, 1.4, 1.6, -Math.PI / 2); [13.2, 17.2].forEa
 [[34.75], [37.55]].forEach(([x]) => { const d = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 2.35), MAT.garage); d.position.set(x, GL + 1.175, 44.68); H.add(d); box(x, 44.7, GL, 2.5, 0.06, 0.08, MAT.cornice, H, { cast: false }); box(x, 44.7, GL + 2.35, 2.5, 0.1, 0.12, MAT.cornice, H, { cast: false }); });
 [33.35, 36.15, 38.95].forEach(x => { box(x, 44.75, GL + 2.05, 0.16, 0.14, 0.3, MAT.iron, H); box(x, 44.75, GL + 2.08, 0.11, 0.15, 0.22, MAT.lamp, H, { cast: false }); });
 // downpipes
-[[22.35, 45.45], [32.99, 44.7], [10.85, 35.9], [27.75, 30.15], [27.75, 45.45]].forEach(([x, y]) => { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, EAVE1 - GL, 8), MAT.trimDark); p.position.set(x, (EAVE1 + GL) / 2, y); H.add(p); });
+[[22.35, 45.45], [32.99, 44.7], [10.85, 35.9], [27.75, 30.15], [27.75, 45.45]].forEach(([x, y]) => { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, EAVE1 - GL, 8), MAT.trim); p.position.set(x, (EAVE1 + GL) / 2, y); H.add(p); });
 
 // Verandah: tiled floor, cast-iron columns, lace frieze and brackets, corrugated skillion roof.
 const verPoly = [[12.45, 35.95], [14.82, 35.95], [14.82, 43.06], [20.21, 43.06], [20.21, 45.44], [12.45, 45.44]];
@@ -900,7 +907,10 @@ const T_ = G.today;
 const driveStrip = [[17.6, 47.2], [27.9, 47.2], [27.9, 48.4], [32.95, 48.4], [32.95, 51.4], [17.6, 51.4]];
 ground(driveStrip, GL, MAT.agg, T_, { layer: 3 });
 ground(rect(17.6, 45.44, 20.21, 47.2), GL, MAT.agg, T_, { layer: 3 });
-edgeStrip([[17.6, 51.52], [32.95, 51.52]], T_); edgeStrip([[20.3, 47.08], [27.9, 47.08], [27.9, 48.28], [32.95, 48.28]], T_);
+edgeStrip([[20.3, 47.08], [27.9, 47.08], [27.9, 48.28], [32.95, 48.28]], T_);
+// bluestone crazy-paving border on the lawn side, and bands across the aggregate dividing it into panels (IMG_0691, IMG_0693)
+ground(ribbon([[17.6, 51.3], [32.95, 51.3]], 0.6), GL, MAT.flag, T_, { layer: 4 });
+[[[21.6, 47.0], [21.6, 51.0]], [[27.9, 48.2], [27.9, 51.0]]].forEach(b => ground(ribbon(b, 0.5), GL, MAT.flag, T_, { layer: 4 }));
 // main driveway: SD-06 shows it widening from the drive gate to the garage forecourt
 const leftEdge = y => 33.45 + (y - 51) / 7.5 * 1.45;
 const todayDrive = [[33.0, 51.0], [39.0, 51.0], [39.0, 58.5], [34.9, 58.5], [33.45, 51.0]];
@@ -925,6 +935,7 @@ const brickPaths = [
 brickPaths.forEach(p => ground(ribbon(p, 0.85), GL, MAT.brick, T_, { layer: 3 }));
 // circular bluestone crazy paving with birdbath, stone bench and pedestal on its far side
 ground(circle(circPave[0], circPave[1], circR), GL, MAT.crazy, T_, { layer: 4 });
+{ const ring = circle(circPave[0], circPave[1], circR + 0.03); ground(ribbon(ring.concat([ring[0]]), 0.07), GL, MAT.black, T_, { layer: 5 }); } // black edging round the circle (IMG_0692)
 birdbath(14.6 + cdx, 61.55 + cdy, T_);
 (function bench() { const cx = 16.15 + cdx, cy = 62.3 + cdy; box(cx, cy, GL + 0.38, 1.5, 0.48, 0.09, MAT.stone, T_); [cx - 0.55, cx + 0.55].forEach(x => box(x, cy, GL, 0.25, 0.42, 0.38, MAT.stone, T_)); box(17.5 + cdx, 62.0 + cdy, GL, 0.38, 0.38, 0.9, MAT.stone, T_); box(17.5 + cdx, 62.0 + cdy, GL + 0.9, 0.48, 0.48, 0.1, MAT.stone, T_); })();
 // brick step at the pedestrian gate (garden sits above the footpath)
