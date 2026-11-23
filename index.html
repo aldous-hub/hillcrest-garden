@@ -542,6 +542,8 @@ function plantKit(type, x, y, base, out, scale = 1) {
   const j = 0.85 + 0.3 * rnd();
   if (type === 'hydrangea') { const s = 0.55 * j * scale; out.shrubs.push({ x, y, base, oy: s * 0.75, sx: s, sy: s * 0.82, sz: s, rot: rnd() * 6, color: pick([0x4f7a3a, 0x58823f]) });
     const fc = pick([0xf2f2ee, 0xc9d8f0, 0xb7c8ea, 0xf1f1ea, 0xdfe7c8]); for (let i = 0; i < 7; i++) { const a = rnd() * 6.28, rr = s * 0.62; out.flowers.push({ x: x + Math.cos(a) * rr, y: y + Math.sin(a) * rr, base, oy: s * (1.0 + rnd() * 0.4), sx: 0.13 * scale, sy: 0.11 * scale, sz: 0.13 * scale, rot: rnd() * 6, color: fc }); } }
+  else if (type === 'oakleaf') { const s = 0.72 * j * scale; out.shrubs.push({ x, y, base, oy: s * 0.72, sx: s, sy: s * 0.8, sz: s, rot: rnd() * 6, color: pick([0x3f6a2e, 0x4a7333, 0x557a35]) }); // oak-leaf hydrangea: coarse leaves, upright white cones
+    for (let i = 0; i < 6; i++) { const a = rnd() * 6.28, rr = s * 0.55; out.flowers.push({ x: x + Math.cos(a) * rr, y: y + Math.sin(a) * rr, base, oy: s * (1.05 + rnd() * 0.35), sx: 0.09, sy: 0.24, sz: 0.09, rot: 0, color: pick([0xf4f1e6, 0xefe9d6, 0xe8d8cc]) }); } }
   else if (type === 'arthropodium') { const s = 0.42 * j * scale; out.shrubs.push({ x, y, base, oy: s * 0.45, sx: s, sy: s * 0.6, sz: s, rot: rnd() * 6, color: 0x8daf6a });
     for (let i = 0; i < 3; i++) out.flowers.push({ x: x + R(-0.15, 0.15), y: y + R(-0.15, 0.15), base, oy: s * 1.15, sx: 0.05, sy: 0.05, sz: 0.05, rot: 0, color: 0xf7f7f2 }); }
   else if (type === 'grass') { const s = 0.3 * j * scale; out.grass.push({ x, y, base, sx: s, sy: 0.75 * j * scale, sz: s, rot: rnd() * 6, tx: R(-0.08, 0.08), tz: R(-0.08, 0.08), color: pick([0x5e7a3a, 0x6a843f, 0x56703a]) }); }
@@ -635,7 +637,6 @@ block(36.4, 29.5, 39.4, 37.6, EAVE1, H, { wm: MAT.wb, cornice: false });        
 chimney(30.3, 43.6, EAVE2, 2.2, H); chimney(30.3, 31.6, EAVE2, 2.2, H); chimney(17.6, 36.5, EAVE1, 3.0, H); chimney(24.6, 33.3, EAVE1, 2.9, H); chimney(14.2, 30.6, EAVE1, 2.6, H);
 // windows and doors (street side faces +z)
 [23.75, 24.9, 26.05].forEach(x => opening(H, x, 46.42, FLOOR + 0.45, 0.62, 1.95, 0, { shutter: true }));
-opening(H, 21.45, 45.42, FLOOR + 0.6, 0.95, 1.6, 0, { sill: false });
 opening(H, 30.3, 45.42, FLOOR + 3.3, 0.95, 1.8, 0); // the wing's street face has one upper sash, centred (2017 west elevation, IMG_0694)
 [42.6, 38.2, 33.8].forEach(z => opening(H, 27.68, z, FLOOR + 3.4, 0.8, 1.4, -Math.PI / 2, { shutter: true }));
 opening(H, 19.2, 43.08, FLOOR, 1.05, 2.3, 0, { kind: 'door' }); [16.1, 17.7].forEach(x => opening(H, x, 43.08, FLOOR, 1.05, 2.3, 0, { kind: 'french' }));
@@ -710,8 +711,9 @@ function fenceLine(a, b, h, m, group, { postEvery = 2.4, gaps = null, post = nul
     mesh.position.set(a[0] + ux * (t0 + t1) / 2, h / 2, a[1] + uy * (t0 + t1) / 2); mesh.rotation.y = Math.atan2(ux, uy); mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); });
   for (let t = 0; t <= L; t += postEvery) box(a[0] + ux * t, a[1] + uy * t, 0, 0.11, 0.11, h + 0.06, post || m, group);
 }
-fenceLine([7.3, 18.6], [10.7, 65.5], 2.1, MAT.paling, H, { post: mat(0xb08a58) });
-(function () { const a = [7.3, 18.6], b = [10.7, 65.5]; const L = Math.hypot(b[0] - a[0], b[1] - a[1]); const t = T.lattice.clone(); t.needsUpdate = true; t.repeat.set(L / 0.6, 0.55); const m = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 }); const p = new THREE.Mesh(new THREE.PlaneGeometry(L, 0.34), m); p.position.set((a[0] + b[0]) / 2, 2.29, (a[1] + b[1]) / 2); p.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]); p.castShadow = true; H.add(p); beam(V(a[0], a[1], 2.48), V(b[0], b[1], 2.48), 0.08, 0.05, mat(0xb08a58), H); beam(V(a[0], a[1], 2.11), V(b[0], b[1], 2.11), 0.08, 0.05, mat(0xb08a58), H); })();
+[[G.today, MAT.paling, mat(0xb08a58), null], [G.prop, MAT.fenceBlack, MAT.black, 0x2b2a29]].forEach(([FG, fm, pm, lc]) => { // north fence: treated pine today, painted black in the proposal
+fenceLine([7.3, 18.6], [10.7, 65.5], 2.1, fm, FG, { post: pm });
+(function () { const a = [7.3, 18.6], b = [10.7, 65.5]; const L = Math.hypot(b[0] - a[0], b[1] - a[1]); const t = T.lattice.clone(); t.needsUpdate = true; t.repeat.set(L / 0.6, 0.55); const m = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9, ...(lc ? { color: lc } : {}) }); const p = new THREE.Mesh(new THREE.PlaneGeometry(L, 0.34), m); p.position.set((a[0] + b[0]) / 2, 2.29, (a[1] + b[1]) / 2); p.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]); p.castShadow = true; FG.add(p); beam(V(a[0], a[1], 2.48), V(b[0], b[1], 2.48), 0.08, 0.05, pm, FG); beam(V(a[0], a[1], 2.11), V(b[0], b[1], 2.11), 0.08, 0.05, pm, FG); })(); });
 fenceLine([37.9, 16.5], [41.4, 63.2], 2.1, MAT.fenceBlack, H, { post: MAT.black });
 fenceLine([7.3, 18.6], [37.9, 16.5], 2.0, MAT.fenceBlack, H, { post: MAT.black });
 hedge([[7.9, rearY(7.9) + 0.55], [26.0, rearY(26.0) + 0.55]], 3.0, 1.0, H, { color: 0x3e5e2e });
@@ -752,7 +754,7 @@ block(43.8, 22, 55.5, 50, 6.4, H, { wm: tmat(T.wb, 1.44, { color: 0xffffff }), r
 const boxHedgePts = [[12.25, 36.3], [12.25, 46.2], ...circle(13.75, 46.2, 1.5, 12, 180 * deg, 90 * deg).slice(1), [17.35, 47.7], [17.35, 45.6]];
 hedge(boxHedgePts, 0.62, 0.42, H, { color: 0x34532a });
 const kitS = newKit();
-for (let x = 12.95; x < 17.0; x += 0.72) for (const y of [46.0, 46.95]) { if (x < 13.6 && y > 46.6) continue; plantKit('hydrangea', x + R(-0.12, 0.12), y + R(-0.12, 0.12), GL, kitS, 1.05); }
+for (let x = 12.95; x < 17.0; x += 0.72) for (const y of [46.0, 46.95]) { if (x < 13.6 && y > 46.6) continue; plantKit('oakleaf', x + R(-0.12, 0.12), y + R(-0.12, 0.12), GL, kitS, 0.85); }
 flushKit(kitS, H, false);
 tree({ x: 13.25, y: 46.15, h: 2.8, r: 1.0, color: 0x6f9a48, kind: 'maple', group: H });
 (function urn(x, y) { const pts = [[0, 0], [0.22, 0], [0.22, 0.08], [0.12, 0.12], [0.1, 0.35], [0.12, 0.42], [0.3, 0.52], [0.34, 0.8], [0.3, 0.86], [0.36, 0.9], [0.36, 0.95], [0, 0.95]].map(p => new THREE.Vector2(p[0], p[1])); const u = new THREE.Mesh(new THREE.LatheGeometry(pts, 20), MAT.stone); box(x, y, GL, 0.36, 0.36, 0.26, MAT.stone, H); u.position.set(x, GL + 0.26, y); u.castShadow = true; H.add(u); })(17.62, 47.85);
@@ -761,7 +763,7 @@ tree({ x: 13.25, y: 46.15, h: 2.8, r: 1.0, color: 0x6f9a48, kind: 'maple', group
 const P_ = G.prop;
 /* ---- design options: each choice is its own group, switched on and off ---- */
 const OPT = {
-  pergola: { label: 'Pergola finish', choices: [['timber', 'Natural timber'], ['charcoal', 'Charcoal'], ['white', 'White']], def: 'timber' },
+  pergola: { label: 'Pergola style', choices: [['timber', 'Timber (Rob)'], ['iron', 'Iron lace'], ['piers', 'Rendered piers'], ['steel', 'Slim steel']], def: 'timber' },
   hedge: { label: 'New box hedge height', choices: [['60', '60 cm'], ['90', '90 cm']], def: '60' },
   steppers: { label: 'Steppers', choices: [['pebble', 'Granite pebble'], ['blue', 'Bluestone']], def: 'pebble' },
   steps: { label: 'Gate steps', choices: [['brick', 'Reclaimed brick'], ['blue', 'Bluestone']], def: 'brick' },
@@ -770,7 +772,6 @@ Object.values(OPT).forEach(o => o.val = o.def);
 const optGroups = {};
 function optGroup(key, val) { const g = new THREE.Group(); P_.add(g); (optGroups[key] ||= {})[val] = g; return g; }
 const pergMat = MAT.timber.clone();
-const PERG_COL = { timber: 0x7d553a, charcoal: 0x2f3133, white: 0xe9e5db };
 const lawnPoly = [[19.38, 49.4], [23.18, 49.4], ...circle(C[0], C[1], 7.4, 48, -74.4 * deg, 72.8 * deg), [20.45, 63.6], ...circle(C[0], C[1], 3.65, 48, 101.7 * deg, -119.7 * deg)]; // brick-edged all round, runs up to the pergola's brick ring (Rob's plan)
 ground(lawnPoly, GL, MAT.lawn, P_, { layer: 1 });
 ground(ribbon(circle(C[0], C[1], 7.525, 48, -74.4 * deg, 72.8 * deg), 0.25), GL, MAT.brick, P_, { layer: 2 });
@@ -790,7 +791,12 @@ ground(circle(C[0], C[1], 3.65), GL, MAT.brick, P_, { layer: 2, holes: [circle(C
 ground([...circle(C[0], C[1], 3.65 + PW, 40, 101.7 * deg, 240.3 * deg), ...circle(C[0], C[1], 3.65, 40, 240.3 * deg, 101.7 * deg)], GL, MAT.agg, P_, { layer: 3 });
 ground(ribbon(circle(C[0], C[1], 3.65 + PW + BR / 2, 40, 113.9 * deg, 229.7 * deg), BR), GL, MAT.brick, P_, { layer: 2 });
 // straight paths: house front, west side, spur to the side gate
-[rect(10.30, 48.42, 26.5, 48.42 + PW), rect(10.30, 37.45, 10.30 + PW, 48.42), rect(northX(37.8) + 0.3, 37.45, 10.30, 37.45 + PW)].forEach(p => pebblePath(p, P_));
+const SPX = 11.01; // west side path, moved 0.71 m east to run close to the existing box hedge (Will's note)
+[rect(SPX, 48.42, 26.5, 48.42 + PW), rect(SPX, 37.45, SPX + PW, 48.42), rect(northX(37.8) + 0.3, 37.45, SPX, 37.45 + PW)].forEach(p => pebblePath(p, P_));
+// the north bed, now wider: corten steel edge along the path side, lilly pilly hedge along the black fence at fence height
+{ const corten = mat(0x8b4a26, { roughness: 0.85, metalness: 0.15 }); const ex = SPX - BR - 0.02, ey = 37.45 + PW + BR + 0.02;
+  wallLine([[northX(ey) + 0.12, ey], [ex, ey], [ex, 48.42 + PW + BR + 0.02], [12.25, 48.42 + PW + BR + 0.02]], GL - 0.05, 0.16, 0.035, corten, P_, false); // drawn a little thicker than real 5 mm edging so it reads in the model
+  hedge([[northX(38.9) + 0.45, 38.9], [northX(49.3) + 0.45, 49.3]], 2.1, 0.7, P_, { color: 0x3d6a33, grow: true }); }
 // north path from the house path down into the ring path (its brick borders stop at the ring)
 ground(rect(18.40, 49.15, 18.40 + PW, 53.5), GL, MAT.agg, P_, { layer: 3 });
 ground(rect(18.15, 49.15, 19.38, 53.3), GL, MAT.brick, P_, { layer: 2 });
@@ -804,6 +810,7 @@ const visitorBay = [[31.5, 53.59], [32.62, 52.98], [33.43, 52.98], [35.16, 59.94
 const visitorBayIn = [[31.9, 53.84], [32.74, 53.38], [33.53, 53.38], [35.03, 59.43], [31.9, 57.65]];
 ground(rect(26.5, 48.3, 33.08, 51.42), GL, MAT.agg, P_, { layer: 3 }); // bay along the house front
 [[[33.0, 51.0], [39.0, 51.0], [39.0, 58.5], [34.85, 58.5], [33.04, 51.39]], [[39.0, 53.0], [40.35, 53.0], [40.45, 59.25], [39.0, 59.25]]].forEach(p => ground(p, GL, MAT.agg, P_, { layer: 2 }));
+ground([[40.35, 53.0], [southX(53.0) - 0.03, 53.0], [southX(59.25) - 0.03, 59.25], [40.45, 59.25]], GL, MAT.flag, P_, { layer: 2 }); // bluestone right up to the fence beside the bay
 ground(visitorBay, GL, MAT.brick, P_, { layer: 3 }); ground(visitorBayIn, GL, MAT.agg, P_, { layer: 4 });
 [rect(26.27, 49.15, 26.52, 51.67), rect(26.27, 51.42, 33.1, 51.67)].forEach(r => ground(r, GL, MAT.brick, P_, { layer: 4 })); // house-front bay's brick edge, continuing the path border
 // entry: crazy-paved square stepping up to the verandah
@@ -818,13 +825,36 @@ wallLine([[14.96, 62.2], [14.96, frontY(14.96) - 0.35]], 0, GL + 0.08, 0.2, MAT.
   const items = []; for (let i = 0; i <= n; i++) { const a = a0 + (a1 - a0) * i / n; items.push({ x: S[0] + r * Math.cos(a), y: S[1] + r * Math.sin(a), base: GL, oy: 0.9, sx: 0.045, sy: 1.8, sz: 0.045, rot: -a, color: 0xa47a52 }); }
   instanced(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 }), items, P_);
   const cap = circle(S[0], S[1], r, 16, a0, a1); wallLine(cap, GL + 1.8, 0.05, 0.09, MAT.timber, P_); wallLine(cap, GL + 1.0, 0.05, 0.06, MAT.timber, P_); })();
-function arch(xa, xb) { [xa, xb].forEach(x => { box(x, 47.935, GL, 0.12, 0.12, 2.45, MAT.timber, P_); box(x, 49.635, GL, 0.12, 0.12, 2.45, MAT.timber, P_); beam(V(x, 47.685, GL + 2.5), V(x, 49.885, GL + 2.5), 0.1, 0.2, MAT.timber, P_); }); [47.985, 48.785, 49.585].forEach(y => beam(V(xa - 0.25, y, GL + 2.66), V(xb + 0.25, y, GL + 2.66), 0.07, 0.12, MAT.timber, P_)); }
-arch(12.13, 13.23); arch(24.42, 25.39);
-(function pergola() { const top = GL + 2.6, posts = [];
-  for (let k = 0; k < 12; k++) { const a = (-90 + 30 * k) * deg; posts.push([C[0] + 3.3 * Math.cos(a), C[1] + 3.3 * Math.sin(a)]); box(posts[k][0], posts[k][1], GL, 0.13, 0.13, 2.6, pergMat, P_); box(posts[k][0], posts[k][1], GL, 0.2, 0.2, 0.08, MAT.black, P_, { cast: false });
-    beam(V(C[0] + 3.75 * Math.cos(a), C[1] + 3.75 * Math.sin(a), top + 0.02), V(C[0] + 0.7 * Math.cos(a), C[1] + 0.7 * Math.sin(a), top + 0.42), 0.08, 0.2, pergMat, P_); }
-  wallLine([...posts, posts[0]], top - 0.12, 0.2, 0.12, pergMat, P_);
-  const ring = circle(C[0], C[1], 0.7, 12); wallLine(ring.concat([ring[0]]), top + 0.32, 0.18, 0.1, pergMat, P_);
+/* timber arches removed at Will's request */ function arch_unused(xa, xb) { [xa, xb].forEach(x => { box(x, 47.935, GL, 0.12, 0.12, 2.45, MAT.timber, P_); box(x, 49.635, GL, 0.12, 0.12, 2.45, MAT.timber, P_); beam(V(x, 47.685, GL + 2.5), V(x, 49.885, GL + 2.5), 0.1, 0.2, MAT.timber, P_); }); [47.985, 48.785, 49.585].forEach(y => beam(V(xa - 0.25, y, GL + 2.66), V(xb + 0.25, y, GL + 2.66), 0.07, 0.12, MAT.timber, P_)); }
+// Pergola styles (Design options). Same 12-post circle, 2.6 m to the ring beam, egg swing from the centre.
+// timber: Rob's concept. iron: black posts, lace frieze and brackets like the verandah, ribs curving up to a crown.
+// piers: cream rendered piers with moulded caps like the house, slim black steel ring and ribs. steel: fine square charcoal steel.
+function lacePanel(a, b, yc, h, group) { const L = Math.hypot(b[0] - a[0], b[1] - a[1]); const t = T.lace.clone(); t.needsUpdate = true; t.repeat.set(Math.max(1, Math.round(L / 0.95)), 1); const m = MAT.lace.clone(); m.map = t; const p = new THREE.Mesh(new THREE.PlaneGeometry(L, h), m); p.position.set((a[0] + b[0]) / 2, yc, (a[1] + b[1]) / 2); p.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]); p.castShadow = true; group.add(p); }
+(function pergola() { const top = GL + 2.6, posts = [], angs = [];
+  for (let k = 0; k < 12; k++) { const a = (-90 + 30 * k) * deg; angs.push(a); posts.push([C[0] + 3.3 * Math.cos(a), C[1] + 3.3 * Math.sin(a)]); }
+  const at = (a, r) => [C[0] + r * Math.cos(a), C[1] + r * Math.sin(a)];
+  const ringAt = (r, h, ht, wt, m, g) => { const rg = circle(C[0], C[1], r, 24); wallLine(rg.concat([rg[0]]), h, ht, wt, m, g); };
+  const rib = (a, r0, h0, r1, h1, curve, w, d, m, g) => { const n = curve ? 6 : 1; for (let i = 0; i < n; i++) { const u0 = i / n, u1 = (i + 1) / n; const hh = u => curve ? h0 + (h1 - h0) * Math.sin(u * Math.PI / 2) : h0 + (h1 - h0) * u; const p0 = at(a, r0 + (r1 - r0) * u0), p1 = at(a, r0 + (r1 - r0) * u1); beam(V(p0[0], p0[1], hh(u0)), V(p1[0], p1[1], hh(u1)), w, d, m, g, false); } };
+  { const g = optGroup('pergola', 'timber');
+    posts.forEach((p, k) => { const a = angs[k]; box(p[0], p[1], GL, 0.13, 0.13, 2.6, pergMat, g); box(p[0], p[1], GL, 0.2, 0.2, 0.08, MAT.black, g, { cast: false });
+      beam(V(C[0] + 3.75 * Math.cos(a), C[1] + 3.75 * Math.sin(a), top + 0.02), V(C[0] + 0.7 * Math.cos(a), C[1] + 0.7 * Math.sin(a), top + 0.42), 0.08, 0.2, pergMat, g); });
+    wallLine([...posts, posts[0]], top - 0.12, 0.2, 0.12, pergMat, g);
+    const ring = circle(C[0], C[1], 0.7, 12); wallLine(ring.concat([ring[0]]), top + 0.32, 0.18, 0.1, pergMat, g); }
+  { const g = optGroup('pergola', 'iron'); const colGeo = new THREE.CylinderGeometry(0.05, 0.06, 2.3, 12);
+    posts.forEach((p, k) => { const a = angs[k]; const c = new THREE.Mesh(colGeo, MAT.iron); c.position.set(p[0], GL + 0.15 + 1.15, p[1]); c.castShadow = true; g.add(c); box(p[0], p[1], GL, 0.17, 0.17, 0.18, MAT.iron, g);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.06, 0.18, 10), MAT.iron); cap.position.set(p[0], top - 0.1, p[1]); g.add(cap);
+      const tx = -Math.sin(a), ty = Math.cos(a); [1, -1].forEach(sg => { const b = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.42), MAT.bracket); b.position.set(p[0] + sg * tx * 0.23, top - 0.62, p[1] + sg * ty * 0.23); b.rotation.y = -Math.atan2(ty, tx); b.scale.x = -sg; g.add(b); });
+      lacePanel(p, posts[(k + 1) % 12], top - 0.25, 0.36, g);
+      rib(a, 3.3, top, 0.42, top + 0.85, true, 0.05, 0.06, MAT.iron, g); });
+    ringAt(3.3, top - 0.05, 0.08, 0.09, MAT.iron, g); ringAt(0.42, top + 0.8, 0.08, 0.05, MAT.iron, g);
+    const fin = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.35, 10), MAT.iron); fin.position.set(C[0], top + 1.05, C[1]); g.add(fin); const ball = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), MAT.iron); ball.position.set(C[0], top + 0.88, C[1]); g.add(ball); }
+  { const g = optGroup('pergola', 'piers');
+    posts.forEach((p, k) => { const a = angs[k]; box(p[0], p[1], GL, 0.44, 0.44, 0.3, MAT.render, g, { rotY: -a }); box(p[0], p[1], GL + 0.3, 0.34, 0.34, 2.06, MAT.render, g, { rotY: -a }); box(p[0], p[1], GL + 2.36, 0.44, 0.44, 0.1, MAT.cornice, g, { rotY: -a }); box(p[0], p[1], GL + 2.46, 0.38, 0.38, 0.06, MAT.cornice, g, { rotY: -a });
+      rib(a, 3.45, top + 0.1, 0.6, top + 0.5, false, 0.05, 0.1, MAT.black, g); });
+    ringAt(3.3, top - 0.08, 0.16, 0.07, MAT.black, g); ringAt(0.6, top + 0.44, 0.12, 0.06, MAT.black, g); ringAt(1.9, top + 0.3, 0.06, 0.04, MAT.black, g); }
+  { const g = optGroup('pergola', 'steel'); const st = mat(0x2f3133, { roughness: 0.5, metalness: 0.3 });
+    posts.forEach((p, k) => { const a = angs[k]; box(p[0], p[1], GL, 0.08, 0.08, 2.6, st, g, { rotY: -a }); rib(a, 3.4, top + 0.1, 0.55, top + 0.4, false, 0.03, 0.12, st, g); });
+    ringAt(3.3, top - 0.1, 0.18, 0.06, st, g); ringAt(1.95, top + 0.2, 0.08, 0.04, st, g); ringAt(0.55, top + 0.34, 0.1, 0.05, st, g); }
   const egg = new THREE.Group(); egg.position.set(21.75, GL + 1.35, 57.3);
   const [wc, wx] = cnv(64); wx.fillStyle = '#a5804f'; wx.fillRect(0, 0, 64, 64); for (let i = 0; i < 64; i += 8) for (let j = 0; j < 64; j += 8) { wx.fillStyle = ((i + j) / 8) % 2 ? '#c49d68' : '#8c6a40'; wx.fillRect(i, j, 8, 4); }
   const wt = toTex(wc); wt.repeat.set(10, 8);
@@ -865,14 +895,15 @@ ground([[32.3, 61.2], [35.3, 61.1], [35.4, 63.1], [32.3, 63.25]], GL, MAT.agg, P
 [32.75, 33.45, 34.15, 34.85].forEach(x => { box(x, 62.55, GL, 0.58, 0.72, 1.05, MAT.bin, P_); box(x, 62.55, GL + 1.05, 0.6, 0.74, 0.05, MAT.binLid, P_); });
 // new English box hedge continues the existing hedge's straight front line (y 47.7) past the entry and pond,
 // giving one straight front to the bed along the house, up to the sunroom corner
-[['60', 0.62, 0.42], ['90', 0.92, 0.5]].forEach(([v, h, w]) => hedge([[22.25, 47.7], [28.1, 47.7]], h, w, optGroup('hedge', v), { color: 0x34532a, grow: true }));
-const kitB = newKit(); for (let x = 22.7; x < 27.9; x += 0.7) plantKit(x > 23.0 && x < 26.8 ? 'arthropodium' : 'hydrangea', x + R(-0.08, 0.08), x > 23.0 && x < 26.8 ? 46.95 : 46.5, GL, kitB, 0.9);
+// ...then on past the sunroom windows and back along its south side toward the garage (Will's note)
+[['60', 0.62, 0.42], ['90', 0.92, 0.5]].forEach(([v, h, w]) => hedge([[22.25, 47.7], [27.95, 47.7], [28.15, 47.98], [32.62, 47.98], [32.62, 45.5]], h, w, optGroup('hedge', v), { color: 0x34532a, grow: true }));
+const kitB = newKit(); for (let x = 22.7; x < 27.9; x += 0.7) plantKit(x > 23.0 && x < 26.8 ? 'arthropodium' : 'oakleaf', x + R(-0.08, 0.08), x > 23.0 && x < 26.8 ? 46.95 : 46.5, GL, kitB, 0.9);
 flushKit(kitB, P_, true);
 const featureTrees = [[12.86, 59.24, 4.6, 1.75], [16.84, 60.68, 5.2, 1.6], [25.7, 49.75, 6.0, 1.6], [30.27, 56.2, 5.4, 1.6], [30.77, 60.6, 4.2, 1.6], [28.5, 61.6, 5.0, 1.6]];
 featureTrees.forEach(([x, y, h, r]) => tree({ x, y, h, r, color: 0x6c8f4a, group: P_, grow: true, s0: 0.42 }));
 const shadeTrees = [[28.44, 52.3, 8.5, 3.0], [31.96, 52.3, 7.5, 2.4], [34.07, 60.4, 8.5, 3.0], [39.95, 60.1, 8.5, 3.0]];
 shadeTrees.forEach(([x, y, h, r]) => tree({ x, y, h, r, color: 0x527a38, group: P_, grow: true, s0: 0.36 }));
-[46.3, 48.3, 50.3, 52.3].forEach(y => tree({ x: 39.49, y, h: 6.5, r: 1.35, color: 0x4b6f35, kind: 'column', group: P_, grow: true, s0: 0.4 }));
+hedge([[southX(45.4) - 0.5, 45.4], [southX(53.0) - 0.5, 53.0]], 3.0, 0.85, P_, { color: 0x3d6a33, grow: true }); // lilly pilly hedge above fence height along the south fence (Will's note)
 tree({ x: 16.07, y: 60.95, h: 2.0, r: 0.75, color: 0x3f6a30, group: P_, grow: true, s0: 0.65, fruit: true });
 const gateLink = [[19.24, 59.7], [20.45, 59.7], [20.45, 63.85], [18.2, 63.85], [18.2, 62.15], [19.24, 62.15]];
 const allTreesP = featureTrees.concat(shadeTrees).map(t => [t[0], t[1]]);
@@ -892,10 +923,9 @@ function freeProp(x, y) {
 const kitP = newKit();
 for (let y = 49.6; y < 66; y += 0.9) for (let x = 9.5; x < 35; x += 0.9) {
   const px = x + R(-0.3, 0.3), py = y + R(-0.3, 0.3); if (!freeProp(px, py)) continue;
-  const roll = rnd(); const t = roll < 0.3 ? 'hydrangea' : roll < 0.58 ? 'arthropodium' : roll < 0.78 ? 'grass' : 'ground'; plantKit(t, px, py, GL, kitP);
+  plantKit(rnd() < 0.45 ? 'oakleaf' : 'arthropodium', px, py, GL, kitP, rnd() < 0.45 ? 0.95 : 1.0); // beds: arthropodium and oak-leaf hydrangeas (Will's notes)
 }
-for (let y = 38.6; y < 48; y += 0.9) for (let x = northX(y) + 0.5; x < 10.0; x += 0.9) { if (rnd() < 0.85) plantKit(rnd() < 0.5 ? 'hydrangea' : 'arthropodium', x + R(-0.2, 0.2), y + R(-0.2, 0.2), GL, kitP); }
-for (let y = 45.5; y < 53.6; y += 0.55) plantKit('grass', 40.05 + R(-0.12, 0.12), y, GL, kitP);
+for (let y = 38.9; y < 49.3; y += 0.75) for (let x = northX(y) + 1.15; x < SPX - 0.45; x += 0.6) plantKit(rnd() < 0.5 ? 'oakleaf' : 'arthropodium', x + R(-0.1, 0.1), y + R(-0.15, 0.15), GL, kitP, 0.85);
 for (let x = 19.6; x < 32; x += 0.55) plantKit('grass', x + R(-0.08, 0.08), frontY(x) - 1.3 + R(-0.08, 0.08), GL, kitP);
 for (let y = 51.6; y < 58.2; y += 0.55) plantKit('grass', 31.2, y, GL, kitP);
 flushKit(kitP, P_, true);
@@ -1016,13 +1046,13 @@ const LABELS = {
     { n: 5, t: 'Citrus tree', p: [16.07, GL + 2.2, 60.95] },
     { n: 6, t: 'Fish pond with bubbling fountain', p: [21.15, GL + 1.1, 46.85] },
     { n: 7, t: 'New entry, steps up to the tiled verandah', p: [18.7, GL + 0.9, 46.9] },
-    { n: 8, t: 'Timber arches over the path', p: [12.7, GL + 3.0, 48.75], alt: [24.9, GL + 3.0, 48.75] },
-    { n: 9, t: 'Box hedge extended along the house', p: [24.5, GL + 1.0, 47.1] },
-    { n: 10, t: 'Feature trees (6, mixed sizes)', p: [30.27, GL + 6.0, 56.2] },
-    { n: 11, t: 'New driveway trees and parking', p: [36.8, GL + 1.6, 54.5] },
-    { n: 12, t: 'Bin enclosure', p: [33.7, GL + 1.7, 62.2] },
-    { n: 13, t: 'Bunya pine (moved here)', p: [15.79, GL + 6.9, 52.86] },
-    { n: 14, t: 'Existing box hedge and hydrangea bed (stays)', p: [13.2, GL + 1.0, 47.6] },
+    { n: 8, t: 'Box hedge extended along the house and sunroom', p: [24.5, GL + 1.0, 47.1] },
+    { n: 9, t: 'Feature trees (6, mixed sizes)', p: [30.27, GL + 6.0, 56.2] },
+    { n: 10, t: 'New driveway trees and parking', p: [36.8, GL + 1.6, 54.5] },
+    { n: 11, t: 'Bin enclosure', p: [33.7, GL + 1.7, 62.2] },
+    { n: 12, t: 'Bunya pine (moved here)', p: [15.79, GL + 6.9, 52.86] },
+    { n: 13, t: 'Existing box hedge and hydrangea bed (stays)', p: [13.2, GL + 1.0, 47.6] },
+    { n: 14, t: 'Lilly pilly hedges along the fences', p: [39.6, GL + 3.0, 49.2], alt: [9.6, GL + 2.2, 44.0] },
   ],
   today: [
     { n: 'A', t: 'Two large trees (to be removed)', p: [25.58, GL + 9, 55.4], alt: [18.69, GL + 9, 59.05] },
@@ -1103,7 +1133,7 @@ const TOUR = [
   [[17.45, 2.1, 55.5], [21.2, 2.2, 56.6], 'Ring path around the pergola'],
   [[20.2, 2.1, 55.5], [26.0, 1.4, 58.5], 'Under the pergola, beside the egg swing'],
   [[21.6, 2.1, 52.3], [13.0, 1.2, 53.5], 'Looking across to the bench and steppers'],
-  [[18.65, 2.1, 49.6], [12.0, 2.0, 48.75], 'Front path under the timber arches'],
+  [[18.65, 2.1, 49.6], [12.0, 2.0, 48.75], 'Front path along the house'],
   [[19.4, 2.1, 49.1], [21.1, 1.0, 46.9], 'The fish pond beside the new entry'],
   [[18.75, 2.3, 47.0], [25.5, 1.4, 58.0], 'From the entry, looking back over the garden'],
   [[29.5, 9.5, 69.0], [24.0, 0.8, 54.0], 'The whole front garden'],
@@ -1146,7 +1176,6 @@ $('#keyCollapse').onclick = () => { if (innerWidth <= 760) { $('#key').classList
 /* ============ design options UI ============ */
 function applyOpts() {
   Object.entries(optGroups).forEach(([k, vs]) => Object.entries(vs).forEach(([v, g]) => { g.visible = OPT[k].val === v; }));
-  pergMat.color.setHex(PERG_COL[OPT.pergola.val]);
   document.querySelectorAll('#opts button').forEach(b => b.setAttribute('aria-pressed', OPT[b.dataset.k].val === b.dataset.v));
   try { const q = Object.entries(OPT).filter(([, o]) => o.val !== o.def).map(([k, o]) => k + '=' + o.val).join('&'); history.replaceState(null, '', q ? '#' + q : location.pathname + location.search); } catch (e) {}
 }
