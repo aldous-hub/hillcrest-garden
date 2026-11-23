@@ -547,8 +547,9 @@ ground([[-160, -160], [220, -160], [220, 220], [-160, 220]], -0.02, MAT.outside,
 const rampPoly = [[34.9, 58.5], [39.0, 58.5], [39.0, frontY(39.0)], [36.1, frontY(36.1)], [35.6, 61.0]];
 const baseToday = [[7.3, 18.6], [37.9, 16.5], [41.4, 63.2], [39.0, frontY(39.0)], [39.0, 58.5], [34.9, 58.5], [35.6, 61.0], [36.1, frontY(36.1)], [10.7, 65.5]];
 const baseProp = [[7.3, 18.6], [37.9, 16.5], [41.4, 63.2], [39.0, frontY(39.0)], [39.0, 58.5], [34.9, 58.5], [35.6, 61.0], [36.1, frontY(36.1)], [18.2, frontY(18.2)], [18.2, 62.3], [15.06, 62.3], [15.06, frontY(15.06)], [10.7, 65.5]];
-ground(baseToday, GL, MAT.mulch, G.today);
-ground(baseProp, GL, MAT.mulch, G.prop);
+const poolHoles = [rect(33.0, 18.6, 36.7, 28.4), rect(29.9, 18.6, 31.8, 20.6)]; // pool and spa show as water, not mulch
+ground(baseToday, GL, MAT.mulch, G.today, { holes: poolHoles });
+ground(baseProp, GL, MAT.mulch, G.prop, { holes: poolHoles });
 const rampH = (x, z) => clamp(GL * (frontY(x) - z) / (frontY(x) - 58.5), 0, GL);
 ground(rampPoly, 0, MAT.agg, G.common, { layer: 2, heightFn: rampH });
 ground(rect(32.95, 44.6, 39.0, 51.0), GL, MAT.agg, G.common, { layer: 2 });
