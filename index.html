@@ -721,7 +721,7 @@ const optGroups = {};
 function optGroup(key, val) { const g = new THREE.Group(); P_.add(g); (optGroups[key] ||= {})[val] = g; return g; }
 const pergMat = MAT.timber.clone();
 const PERG_COL = { timber: 0x7d553a, charcoal: 0x2f3133, white: 0xe9e5db };
-const lawnPoly = [[19.4, 49.4], [23.18, 49.4], ...circle(C[0], C[1], 7.4, 48, -74.4 * deg, 72.8 * deg), [20.5, 63.6], ...circle(C[0], C[1], 4.55, 48, 98.7 * deg, -113.2 * deg), [19.4, 52.35]];
+const lawnPoly = [[19.4, 49.4], [23.18, 49.4], ...circle(C[0], C[1], 7.4, 48, -74.4 * deg, 72.8 * deg), [20.5, 63.6], ...circle(C[0], C[1], 3.62, 48, 101.8 * deg, -119.6 * deg)]; // lawn runs right up to the pergola's brick edge ring (Rob's plan)
 ground(lawnPoly, GL, MAT.lawn, P_, { layer: 1 });
 ground(ribbon(circle(C[0], C[1], 7.5, 48, -74.4 * deg, 72.8 * deg), 0.22), GL, MAT.brick, P_, { layer: 2 });
 ground(circle(C[0], C[1], 2.2), GL, MAT.crazy, P_, { layer: 3 });
@@ -733,12 +733,16 @@ function offsetPoly(pts, d) { let area = 0; for (let i = 0; i < pts.length; i++)
     const n1 = [(p[1] - a[1]), -(p[0] - a[0])], n2 = [(b[1] - p[1]), -(b[0] - p[0])]; const l1 = Math.hypot(...n1), l2 = Math.hypot(...n2);
     const m = [n1[0] / l1 + n2[0] / l2, n1[1] / l1 + n2[1] / l2]; const lm = Math.hypot(...m); const cosh = lm / 2; return [p[0] + s * m[0] / lm * d / Math.max(cosh, 0.5), p[1] + s * m[1] / lm * d / Math.max(cosh, 0.5)]; }); }
 function pebblePath(poly, group) { ground(offsetPoly(poly, BR), GL, MAT.brick, group, { layer: 2 }); ground(poly, GL, MAT.agg, group, { layer: 3 }); }
-ground(circle(C[0], C[1], 4.45 + BR), GL, MAT.brick, P_, { layer: 2, holes: [circle(C[0], C[1], 3.45 - BR)] });
-ground(circle(C[0], C[1], 4.45), GL, MAT.agg, P_, { layer: 3, holes: [circle(C[0], C[1], 3.45)] });
+// thin brick edge ring at the pergola (r 3.39 to 3.62), then a pebble path around the WEST side only, linking the north path to the gate path
+ground(circle(C[0], C[1], 3.62), GL, MAT.brick, P_, { layer: 2, holes: [circle(C[0], C[1], 3.39)] });
+ground([...circle(C[0], C[1], 4.3, 32, 101.8 * deg, 240.4 * deg), ...circle(C[0], C[1], 3.62, 32, 240.4 * deg, 101.8 * deg)], GL, MAT.agg, P_, { layer: 3 });
+ground(ribbon(circle(C[0], C[1], 4.41, 32, 101.8 * deg, 240.4 * deg), 0.22), GL, MAT.brick, P_, { layer: 2 });
 const propPaths = [rect(10.1, 48.2 + BR * 0.4, 26.5, 49.3 + BR * 0.4), rect(10.1, 37.4, 11.1, 48.2), rect(northX(37.8) + 0.3, 37.4, 10.1, 38.2), rect(18.2, 49.3, 19.1, 53.3), [[17.9, 59.4], [19.5, 60.2], [19.45, 62.45], [18.2, 62.45]], rect(18.2, 62.45, 19.45, 63.9)];
 propPaths.forEach(p => pebblePath(p, P_));
-[rect(26.5, 48.5, 33.4, 51.45), [[33.6, 51.0], [39.0, 51.0], [39.0, 58.5], [34.9, 58.5]], [[31.5, 52.6], [33.7, 51.8], [35.4, 58.3], [33.0, 58.6], [31.5, 58.0]], [[39.0, 53.3], [40.5, 53.6], [40.6, 58.5], [39.0, 58.5]], [[31.5, 51.45], [33.6, 51.0], [33.7, 51.8], [31.5, 52.6]]].forEach(p => ground(p, GL, MAT.agg, P_, { layer: 2 }));
-ground(ribbon([[26.5, 51.56], [31.5, 51.56]], 0.22), GL, MAT.brick, P_, { layer: 4 }); ground(ribbon([[31.4, 52.6], [31.4, 58.0], [33.0, 58.7], [35.4, 58.4]], 0.22), GL, MAT.brick, P_, { layer: 4 });
+const visitorBay = [[31.5, 53.55], [31.75, 53.2], [32.2, 53.0], [33.6, 53.0], [34.97, 57.05], [34.9, 58.5], [35.1, 59.2], [31.5, 59.2]];
+// parking per Rob's plan: bay along the house front, driveway lane, left bay (beside the lane) and right bay (by the south boundary)
+[rect(26.5, 48.3, 33.08, 51.42), [[33.0, 51.0], [39.0, 51.0], [39.0, 58.5], [34.9, 58.5], [34.97, 57.05], [33.08, 51.42]], visitorBay, [[39.0, 53.0], [40.35, 53.0], [40.45, 59.25], [39.0, 59.25]]].forEach(p => ground(p, GL, MAT.agg, P_, { layer: 2 }));
+ground(ribbon([[26.5, 51.53], [33.0, 51.53]], 0.22), GL, MAT.brick, P_, { layer: 4 }); ground(ribbon([[33.5, 52.9], [32.2, 52.9], [31.65, 53.15], [31.4, 53.6], [31.4, 59.31], [34.9, 59.31]], 0.22), GL, MAT.brick, P_, { layer: 4 });
 // entry: crazy-paved square stepping up to the verandah
 slab(rect(17.43, 45.5, 20.05, 48.15), GL, GL + 0.2, MAT.crazy, P_);
 // pedestrian entry: sunken landing, three steps up, low rendered retaining walls
@@ -807,13 +811,12 @@ const shadeTrees = [[28.44, 52.3, 8.5, 3.0], [31.96, 52.3, 7.5, 2.4], [34.07, 60
 shadeTrees.forEach(([x, y, h, r]) => tree({ x, y, h, r, color: 0x527a38, group: P_, grow: true, s0: 0.36 }));
 [46.3, 48.3, 50.3, 52.3].forEach(y => tree({ x: 39.49, y, h: 6.5, r: 1.35, color: 0x4b6f35, kind: 'column', group: P_, grow: true, s0: 0.4 }));
 tree({ x: 16.07, y: 60.95, h: 2.0, r: 0.75, color: 0x3f6a30, group: P_, grow: true, s0: 0.65, fruit: true });
-const visitorBay = [[31.5, 52.6], [33.7, 51.8], [35.4, 58.3], [33.0, 58.6], [31.5, 58.0]];
 const gateLink = [[17.9, 59.4], [19.5, 60.2], [19.45, 62.45], [18.2, 62.45]];
 const allTreesP = featureTrees.concat(shadeTrees).map(t => [t[0], t[1]]);
 function freeProp(x, y) {
   if (y > frontY(x) - 1.15 || x < northX(y) + 0.45 || x > 34.9) return false;
   if (inPoly(x, y, lawnPoly) || dist(x, y, C) < 4.75) return false;
-  for (const r of [[17.9, 48.1, 19.4, 53.8], [26.3, 48.3, 33.7, 51.8], [14.8, 62.0, 19.7, 70], [32.0, 60.8, 35.6, 64], [17.3, 45.3, 22.3, 48.3], [11.55, 51.7, 12.45, 54.0]]) if (inRect(x, y, r)) return false;
+  for (const r of [[17.9, 48.1, 19.4, 53.8], [26.3, 48.1, 33.2, 51.7], [14.8, 62.0, 19.7, 70], [32.0, 60.8, 35.6, 64], [17.3, 45.3, 22.3, 48.3], [11.55, 51.7, 12.45, 54.0]]) if (inRect(x, y, r)) return false;
   if (y < 49.45 && y > 45.4) return false;
   if (inPoly(x, y, visitorBay) || inPoly(x, y, gateLink) || inPoly(x, y, rampPoly)) return false;
   for (const r of stepperRects) if (inRect(x, y, [r[0][0] - 0.2, r[0][1] - 0.2, r[2][0] + 0.2, r[2][1] + 0.2])) return false;
