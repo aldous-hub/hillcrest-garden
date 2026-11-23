@@ -82,6 +82,14 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); font-size: 0.72rem; font-weight: 700; font-variant-numeric: tabular-nums; flex: none; }
 .today .num { background: var(--today); color: #fff; }
 #assume { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 0.8rem; color: var(--muted); line-height: 1.35; }
+#opts { display: grid; gap: 9px; }
+#opts[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
+.opt { display: grid; gap: 4px; }
+.opt > span { font-size: 0.8rem; font-weight: 600; }
+.opt .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.opt button { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 4px 11px; cursor: pointer; font-weight: 600; font-size: 0.8rem; }
+.opt button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+.optNote { margin: 0; font-size: 0.76rem; color: var(--muted); line-height: 1.35; }
 .smallBtn { border: 1px solid var(--line); background: var(--chip); border-radius: 8px; padding: 4px 10px; cursor: pointer; font-weight: 600; font-size: 0.8rem; }
 #keyToggle { display: none; }
 
@@ -160,6 +168,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   <aside id="key" class="panel" aria-label="Key and assumptions">
     <div class="keyHead"><h2 id="keyTitle">What's in the design</h2><button type="button" class="smallBtn" id="keyCollapse">Hide</button></div>
     <ul id="keyList"></ul>
+    <h3>Design options</h3>
+    <div id="opts" role="group" aria-label="Design options"></div>
+    <p class="optNote">Flick between choices to compare from the same view. On the public page the web address keeps your picks, so you can share a combination.</p>
     <h3>To check with Rob</h3>
     <ul id="assume">
       <li>Plants are placeholders. The plan has no species list yet.</li>
@@ -167,7 +178,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
       <li>Pergola shown 2.6 m high and 6.6 m across, with 12 posts.</li>
       <li>The curved line behind the citrus is shown as the timber batten screen.</li>
       <li>New paths are the existing granite pebble mix with reclaimed red brick borders. Bluestone only where the plan shows crazy paving.</li>
-      <li>Steppers shown in granite pebble and the gate steps in reclaimed brick. The existing driveway keeps its bluestone edging. Confirm both.</li>
+      <li>Steppers default to granite pebble and the gate steps to reclaimed brick. Compare bluestone under Design options. The existing driveway keeps its bluestone edging.</li>
       <li>Tree sizes at 10 years come from the canopy circles on the plan.</li>
       <li>House and existing trees are simplified from the 2017 plans and photos. The Today view is indicative only.</li>
       <li>Bunya pine shown at about 6.5 m. Adjust once its actual height is known.</li>
@@ -697,6 +708,18 @@ tree({ x: 13.25, y: 46.15, h: 2.8, r: 1.0, color: 0x6f9a48, kind: 'maple', group
 
 /* ============ PROPOSED front garden ============ */
 const P_ = G.prop;
+/* ---- design options: each choice is its own group, switched on and off ---- */
+const OPT = {
+  pergola: { label: 'Pergola finish', choices: [['timber', 'Natural timber'], ['charcoal', 'Charcoal'], ['white', 'White']], def: 'timber' },
+  hedge: { label: 'New box hedge height', choices: [['60', '60 cm'], ['90', '90 cm']], def: '60' },
+  steppers: { label: 'Steppers', choices: [['pebble', 'Granite pebble'], ['blue', 'Bluestone']], def: 'pebble' },
+  steps: { label: 'Gate steps', choices: [['brick', 'Reclaimed brick'], ['blue', 'Bluestone']], def: 'brick' },
+};
+Object.values(OPT).forEach(o => o.val = o.def);
+const optGroups = {};
+function optGroup(key, val) { const g = new THREE.Group(); P_.add(g); (optGroups[key] ||= {})[val] = g; return g; }
+const pergMat = MAT.timber.clone();
+const PERG_COL = { timber: 0x7d553a, charcoal: 0x2f3133, white: 0xe9e5db };
 const lawnPoly = [[19.4, 49.4], [23.18, 49.4], ...circle(C[0], C[1], 7.4, 48, -74.4 * deg, 72.8 * deg), [20.5, 63.6], ...circle(C[0], C[1], 4.55, 48, 98.7 * deg, -113.2 * deg), [19.4, 52.35]];
 ground(lawnPoly, GL, MAT.lawn, P_, { layer: 1 });
 ground(ribbon(circle(C[0], C[1], 7.5, 48, -74.4 * deg, 72.8 * deg), 0.22), GL, MAT.brick, P_, { layer: 2 });
@@ -719,7 +742,7 @@ ground(ribbon([[26.5, 51.56], [31.5, 51.56]], 0.22), GL, MAT.brick, P_, { layer:
 slab(rect(17.43, 45.5, 20.05, 48.15), GL, GL + 0.2, MAT.crazy, P_);
 // pedestrian entry: sunken landing, three steps up, low rendered retaining walls
 ground([[15.06, 62.3], [17.26, 62.3], [17.26, frontY(17.26)], [15.06, frontY(15.06)]], 0.01, MAT.crazy, P_, { layer: 1 });
-[[17.26, 17.57, 0.15], [17.57, 17.88, 0.30], [17.88, 18.2, 0.45]].forEach(([a, b, h]) => slab(rect(a, 62.3, b, 63.9), 0, h, MAT.brick, P_));
+[['brick', MAT.brick], ['blue', MAT.blue]].forEach(([v, m]) => { const g = optGroup('steps', v); [[17.26, 17.57, 0.15], [17.57, 17.88, 0.30], [17.88, 18.2, 0.45]].forEach(([a, b, h]) => slab(rect(a, 62.3, b, 63.9), 0, h, m, g)); });
 slab([[17.26, 63.9], [18.2, 63.9], [18.2, frontY(18.2)], [17.26, frontY(17.26)]], 0, GL, MAT.mulch, P_);
 wallLine([[15.06, 62.2], [17.3, 62.2]], 0, GL + 0.08, 0.2, MAT.render, P_);
 wallLine([[14.96, 62.2], [14.96, frontY(14.96) - 0.35]], 0, GL + 0.08, 0.2, MAT.render, P_);
@@ -730,10 +753,10 @@ wallLine([[14.96, 62.2], [14.96, frontY(14.96) - 0.35]], 0, GL + 0.08, 0.2, MAT.
 function arch(xa, xb) { [xa, xb].forEach(x => { box(x, 48.02, GL, 0.12, 0.12, 2.45, MAT.timber, P_); box(x, 49.78, GL, 0.12, 0.12, 2.45, MAT.timber, P_); beam(V(x, 47.77, GL + 2.5), V(x, 50.03, GL + 2.5), 0.1, 0.2, MAT.timber, P_); }); [48.0, 48.75, 49.5].forEach(y => beam(V(xa - 0.25, y, GL + 2.66), V(xb + 0.25, y, GL + 2.66), 0.07, 0.12, MAT.timber, P_)); }
 arch(12.13, 13.23); arch(24.42, 25.39);
 (function pergola() { const top = GL + 2.6, posts = [];
-  for (let k = 0; k < 12; k++) { const a = (-90 + 30 * k) * deg; posts.push([C[0] + 3.3 * Math.cos(a), C[1] + 3.3 * Math.sin(a)]); box(posts[k][0], posts[k][1], GL, 0.13, 0.13, 2.6, MAT.timber, P_); box(posts[k][0], posts[k][1], GL, 0.2, 0.2, 0.08, MAT.black, P_, { cast: false });
-    beam(V(C[0] + 3.75 * Math.cos(a), C[1] + 3.75 * Math.sin(a), top + 0.02), V(C[0] + 0.7 * Math.cos(a), C[1] + 0.7 * Math.sin(a), top + 0.42), 0.08, 0.2, MAT.timber, P_); }
-  wallLine([...posts, posts[0]], top - 0.12, 0.2, 0.12, MAT.timber, P_);
-  const ring = circle(C[0], C[1], 0.7, 12); wallLine(ring.concat([ring[0]]), top + 0.32, 0.18, 0.1, MAT.timber, P_);
+  for (let k = 0; k < 12; k++) { const a = (-90 + 30 * k) * deg; posts.push([C[0] + 3.3 * Math.cos(a), C[1] + 3.3 * Math.sin(a)]); box(posts[k][0], posts[k][1], GL, 0.13, 0.13, 2.6, pergMat, P_); box(posts[k][0], posts[k][1], GL, 0.2, 0.2, 0.08, MAT.black, P_, { cast: false });
+    beam(V(C[0] + 3.75 * Math.cos(a), C[1] + 3.75 * Math.sin(a), top + 0.02), V(C[0] + 0.7 * Math.cos(a), C[1] + 0.7 * Math.sin(a), top + 0.42), 0.08, 0.2, pergMat, P_); }
+  wallLine([...posts, posts[0]], top - 0.12, 0.2, 0.12, pergMat, P_);
+  const ring = circle(C[0], C[1], 0.7, 12); wallLine(ring.concat([ring[0]]), top + 0.32, 0.18, 0.1, pergMat, P_);
   const egg = new THREE.Group(); egg.position.set(21.75, GL + 1.35, 57.3);
   const [wc, wx] = cnv(64); wx.fillStyle = '#a5804f'; wx.fillRect(0, 0, 64, 64); for (let i = 0; i < 64; i += 8) for (let j = 0; j < 64; j += 8) { wx.fillStyle = ((i + j) / 8) % 2 ? '#c49d68' : '#8c6a40'; wx.fillRect(i, j, 8, 4); }
   const wt = toTex(wc); wt.repeat.set(10, 8);
@@ -748,7 +771,7 @@ for (let i = 0; i < 10; i++) stepperRects.push(rect(12.38, 49.6 + i * 0.735, 12.
 [12.38, 13.1, 13.78, 14.47, 15.18, 15.87].forEach(x => stepperRects.push(rect(x, 56.2, x + 0.6, 56.8)));
 stepperRects.push(rect(17.99, 56.15, 18.6, 56.75));
 [11.93, 12.72, 13.5, 14.3].forEach(x => stepperRects.push(rect(x, 62.55, x + 0.6, 63.15)));
-stepperRects.forEach(r => slab(r, GL, GL + 0.05, MAT.agg, P_));
+[['pebble', MAT.agg], ['blue', MAT.blue]].forEach(([v, m]) => { const g = optGroup('steppers', v); stepperRects.forEach(r => slab(r, GL, GL + 0.05, m, g)); });
 (function bench(x0, y0, x1, y1) { const w = x1 - x0, d = y1 - y0; for (let i = 0; i < 5; i++) box(x0 + w * (i + 0.5) / 5, (y0 + y1) / 2, GL + 0.42, w / 5 - 0.02, d, 0.04, MAT.timberLight, P_); [[x0 + 0.05, y0 + 0.15], [x1 - 0.05, y0 + 0.15], [x0 + 0.05, y1 - 0.15], [x1 - 0.05, y1 - 0.15]].forEach(([x, y]) => box(x, y, GL, 0.06, 0.06, 0.42, MAT.timber, P_)); box(x0 + 0.03, (y0 + y1) / 2, GL + 0.46, 0.05, d, 0.42, MAT.timberLight, P_); })(11.76, 51.88, 12.23, 53.85);
 function birdbath(x, y, group) { const pts = [[0, 0], [0.2, 0], [0.2, 0.06], [0.1, 0.12], [0.08, 0.6], [0.14, 0.68], [0.42, 0.74], [0.44, 0.82], [0.3, 0.8], [0, 0.78]].map(p => new THREE.Vector2(p[0], p[1])); const b = new THREE.Mesh(new THREE.LatheGeometry(pts, 24), MAT.stone); b.position.set(x, GL, y); b.castShadow = true; group.add(b); const w = new THREE.Mesh(new THREE.CircleGeometry(0.3, 20), MAT.water); w.rotation.x = -Math.PI / 2; w.position.set(x, GL + 0.79, y); group.add(w); }
 // existing bunya pine, moved into the west garden bed (where the plan shows a small round feature)
@@ -774,7 +797,7 @@ ground([[32.3, 61.2], [35.3, 61.1], [35.4, 63.1], [32.3, 63.25]], GL, MAT.agg, P
 [32.75, 33.45, 34.15, 34.85].forEach(x => { box(x, 62.55, GL, 0.58, 0.72, 1.05, MAT.bin, P_); box(x, 62.55, GL + 1.05, 0.6, 0.74, 0.05, MAT.binLid, P_); });
 // new English box hedge continues the existing hedge's straight front line (y 47.7) past the entry and pond,
 // giving one straight front to the bed along the house, up to the sunroom corner
-hedge([[22.25, 47.7], [28.1, 47.7]], 0.62, 0.42, P_, { color: 0x34532a, grow: true });
+[['60', 0.62, 0.42], ['90', 0.92, 0.5]].forEach(([v, h, w]) => hedge([[22.25, 47.7], [28.1, 47.7]], h, w, optGroup('hedge', v), { color: 0x34532a, grow: true }));
 const kitB = newKit(); for (let x = 22.7; x < 27.9; x += 0.7) plantKit(x > 23.0 && x < 26.8 ? 'arthropodium' : 'hydrangea', x + R(-0.08, 0.08), x > 23.0 && x < 26.8 ? 46.95 : 46.5, GL, kitB, 0.9);
 flushKit(kitB, P_, true);
 const featureTrees = [[12.86, 59.24, 4.6, 1.75], [16.84, 60.68, 5.2, 1.6], [25.7, 49.75, 6.0, 1.6], [30.27, 56.2, 5.4, 1.6], [30.77, 60.6, 4.2, 1.6], [28.5, 61.6, 5.0, 1.6]];
@@ -968,6 +991,7 @@ function setMode(m) {
   state.mode = m; G.today.visible = m === 'today'; G.prop.visible = m === 'prop';
   $('#mToday').setAttribute('aria-pressed', m === 'today'); $('#mProp').setAttribute('aria-pressed', m === 'prop');
   $('#growRow').setAttribute('aria-disabled', m === 'today'); $('#grow').disabled = m === 'today';
+  $('#opts').setAttribute('aria-disabled', m === 'today');
   buildLabels();
 }
 function setGrowth(years) {
@@ -1045,6 +1069,26 @@ $('#tourPlay').onclick = () => { tour.playing = !tour.playing; if (tour.playing 
 $('#tourPos').oninput = e => { tour.t = +e.target.value / 1000; tour.playing = false; $('#tourPlay').textContent = 'Play'; applyTour(); };
 $('#keyToggle').onclick = () => $('#key').classList.toggle('open');
 $('#keyCollapse').onclick = () => { if (innerWidth <= 760) { $('#key').classList.remove('open'); return; } const c = $('#key').classList.toggle('collapsed'); $('#keyCollapse').textContent = c ? 'Show' : 'Hide'; };
+
+/* ============ design options UI ============ */
+function applyOpts() {
+  Object.entries(optGroups).forEach(([k, vs]) => Object.entries(vs).forEach(([v, g]) => { g.visible = OPT[k].val === v; }));
+  pergMat.color.setHex(PERG_COL[OPT.pergola.val]);
+  document.querySelectorAll('#opts button').forEach(b => b.setAttribute('aria-pressed', OPT[b.dataset.k].val === b.dataset.v));
+  try { const q = Object.entries(OPT).filter(([, o]) => o.val !== o.def).map(([k, o]) => k + '=' + o.val).join('&'); history.replaceState(null, '', q ? '#' + q : location.pathname + location.search); } catch (e) {}
+}
+(function buildOpts() {
+  try { new URLSearchParams(location.hash.slice(1)).forEach((v, k) => { if (OPT[k] && OPT[k].choices.some(c => c[0] === v)) OPT[k].val = v; }); } catch (e) {}
+  const box = $('#opts');
+  Object.entries(OPT).forEach(([k, o]) => {
+    const row = document.createElement('div'); row.className = 'opt';
+    const lab = document.createElement('span'); lab.textContent = o.label; row.appendChild(lab);
+    const chips = document.createElement('div'); chips.className = 'chips';
+    o.choices.forEach(([v, t]) => { const b = document.createElement('button'); b.type = 'button'; b.dataset.k = k; b.dataset.v = v; b.textContent = t; b.onclick = () => { o.val = v; applyOpts(); }; chips.appendChild(b); });
+    row.appendChild(chips); box.appendChild(row);
+  });
+  applyOpts();
+})();
 
 /* ============ loop ============ */
 function resize() { const w = canvas.clientWidth, h = canvas.clientHeight; const pr = renderer.getPixelRatio(); if (canvas.width !== Math.floor(w * pr) || canvas.height !== Math.floor(h * pr)) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); } }
