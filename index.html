@@ -650,10 +650,12 @@ const verPoly = [[12.45, 35.95], [14.82, 35.95], [14.82, 43.06], [20.21, 43.06],
 slab(verPoly, GL, FLOOR, MAT.paleTile, H);
 slab([[12.3, 35.8], [12.45, 35.8], [12.45, 45.44], [20.21, 45.44], [20.21, 45.6], [12.3, 45.6]], GL, FLOOR - 0.01, MAT.stoneDark, H, { walk: false });
 const hW = FLOOR + 2.95, hP = FLOOR + 2.62;
-quad([[12.2, hW, 43.06], [20.35, hW, 43.06], [20.35, hP, 45.75], [12.2, hP, 45.75]], MAT.corr, H, { uvTile: 0.8 });
-quad([[14.82, hW, 35.7], [14.82, hW, 43.06], [12.2, hP, 43.06], [12.2, hP, 35.7]], MAT.corr, H, { uvTile: 0.8 });
-quad([[12.2, hW - 0.06, 43.06], [20.35, hW - 0.06, 43.06], [20.35, hP - 0.06, 45.75], [12.2, hP - 0.06, 45.75]], MAT.lining, H, { cast: false });
-quad([[14.82, hW - 0.06, 35.7], [14.82, hW - 0.06, 43.06], [12.2, hP - 0.06, 43.06], [12.2, hP - 0.06, 35.7]], MAT.lining, H, { cast: false });
+// front and side runs meet on a hip from the inner house corner (14.82, 43.06) to the outer corner (12.2, 45.75)
+quad([[14.82, hW, 43.06], [20.35, hW, 43.06], [20.35, hP, 45.75], [12.2, hP, 45.75]], MAT.corr, H, { uvTile: 0.8 });
+quad([[14.82, hW, 35.7], [14.82, hW, 43.06], [12.2, hP, 45.75], [12.2, hP, 35.7]], MAT.corr, H, { uvTile: 0.8 });
+quad([[14.82, hW - 0.06, 43.06], [20.35, hW - 0.06, 43.06], [20.35, hP - 0.06, 45.75], [12.2, hP - 0.06, 45.75]], MAT.lining, H, { cast: false });
+quad([[14.82, hW - 0.06, 35.7], [14.82, hW - 0.06, 43.06], [12.2, hP - 0.06, 45.75], [12.2, hP - 0.06, 35.7]], MAT.lining, H, { cast: false });
+beam(V(14.82, 43.06, hW + 0.03), V(12.2, 45.75, hP + 0.03), 0.14, 0.06, MAT.trimDark, H, false); // hip capping
 beam(V(12.2, 45.75, hP - 0.04), V(20.35, 45.75, hP - 0.04), 0.12, 0.14, MAT.trimDark, H); beam(V(12.2, 35.7, hP - 0.04), V(12.2, 45.75, hP - 0.04), 0.12, 0.14, MAT.trimDark, H);
 const verPosts = [[12.5, 36.3], [12.5, 38.6], [12.5, 41.0], [12.5, 43.3], [12.5, 45.4], [15.06, 45.4], [17.45, 45.4], [20.1, 45.4]];
 const colGeo = new THREE.CylinderGeometry(0.055, 0.065, hP - FLOOR - 0.32, 12);
