@@ -873,7 +873,7 @@ const OPT = {
 };
 Object.values(OPT).forEach(o => o.val = o.def);
 const optGroups = {};
-function optGroup(key, val) { const g = new THREE.Group(); P_.add(g); (optGroups[key] ||= {})[val] = g; return g; }
+function optGroup(key, val, parent = P_) { const g = new THREE.Group(); parent.add(g); ((optGroups[key] ||= {})[val] ||= []).push(g); return g; }
 const pergMat = MAT.timber.clone();
 const lawnPoly = [[19.38, 49.4], [23.18, 49.4], ...circle(C[0], C[1], 7.4, 48, -74.4 * deg, 72.8 * deg), [20.45, 63.6], ...circle(C[0], C[1], 3.65, 48, 101.7 * deg, -119.7 * deg)]; // brick-edged all round, runs up to the pergola's brick ring (Rob's plan)
 ground(lawnPoly, GL, MAT.lawn, P_, { layer: 1 });
@@ -907,8 +907,13 @@ function fillet(P, u, v, r, group, layerB = 2, layerP = 3) { const O = [P[0] + r
   ground([P, [P[0] + r * u[0], P[1] + r * u[1]], ...arc(r - BR), [P[0] + r * v[0], P[1] + r * v[1]]], GL, MAT.brick, group, { layer: layerB }); }
 // pergola: brick edge ring (r 3.40 to 3.65) all round; standard-width pebble path round the WEST side only (r 3.65 to 4.38, brick to 4.63)
 ground(circle(C[0], C[1], 3.65), GL, MAT.brick, P_, { layer: 2, holes: [circle(C[0], C[1], 3.40)] });
-ground([...circle(C[0], C[1], 3.65 + PW, 40, 101.7 * deg, 240.3 * deg), ...circle(C[0], C[1], 3.65, 40, 240.3 * deg, 101.7 * deg)], GL, MAT.agg, P_, { layer: 3 });
-ground(ribbon(circle(C[0], C[1], 3.65 + PW + BR / 2, 40, 113.9 * deg, 229.7 * deg), BR), GL, MAT.brick, P_, { layer: 2 });
+// The ring path and its outer brick stop exactly on the edges of the gate path (street side) and the north path (house side),
+// so every brick border runs straight into the next one (Will's notes)
+const acx = (x, r, rear = false) => { const a = Math.acos((x - C[0]) / r); return rear ? 2 * Math.PI - a : a; }; // angle where circle r crosses x
+const ycx = (x, r, rear = false) => C[1] + (rear ? -1 : 1) * Math.sqrt(r * r - (x - C[0]) ** 2);
+const RP = 3.65 + PW, RB = 3.65 + PW + BR;
+ground([...circle(C[0], C[1], RP, 40, acx(20.2, RP), acx(18.40 + PW, RP, true)), ...circle(C[0], C[1], 3.65, 40, acx(18.40 + PW, 3.65, true), acx(20.2, 3.65))], GL, MAT.agg, P_, { layer: 3 });
+ground([...circle(C[0], C[1], RB, 40, acx(19.49, RB), acx(18.40, RB, true)), ...circle(C[0], C[1], RP, 40, acx(18.40, RP, true), acx(19.49, RP))], GL, MAT.brick, P_, { layer: 2 });
 // straight paths: house front, west side, spur to the side gate
 const SPX = 11.01; // west side path, moved 0.71 m east to run close to the existing box hedge (Will's note)
 [rect(SPX, 48.42, 26.5, 48.42 + PW), rect(SPX, 37.45, SPX + PW, 48.42), rect(northX(37.8) + 0.3, 37.45, SPX, 37.45 + PW)].forEach(p => pebblePath(p, SQ));
@@ -924,24 +929,28 @@ curvedPath(filletLine([[northX(37.8) + 0.3, SGC], [SPC, SGC], [SPC, FPC], [26.5,
   hedge([[northX(38.9) + 0.45, 38.9], [northX(49.3) + 0.45, 49.3]], 2.1, 0.7, P_, { color: 0x3d6a33, grow: true }); }
 // north path from the house path down into the ring path (its brick borders stop at the ring)
 ground(rect(18.40, 49.15, 18.40 + PW, 53.5), GL, MAT.agg, P_, { layer: 3 });
-ground(rect(18.15, 49.15, 19.38, 53.3), GL, MAT.brick, P_, { layer: 2 });
+ground([[18.15, 49.15], [18.40, 49.15], [18.40, ycx(18.40, RB, true)], [18.15, ycx(18.15, RB, true)]], GL, MAT.brick, P_, { layer: 2 }); // west border runs into the ring path's outer brick
+ground([[19.13, 49.15], [19.38, 49.15], [19.38, ycx(19.38, 3.65, true)], [19.13, ycx(19.13, 3.65, true)]], GL, MAT.brick, P_, { layer: 2 }); // east border runs into the pergola's brick ring
 fillet([18.40, 49.15], [-1, 0], [0, 1], 0.9, CV); fillet([18.40 + PW, 49.15], [1, 0], [0, 1], 0.9, CV); // curved: soften the T where it leaves the house path
 // gate path: L-shape. Up from the gate steps (east), then north to the pergola ring
 const a0 = Math.acos((19.49 - C[0]) / 3.65), a1 = Math.acos((20.2 - C[0]) / 3.65);
 ground([[19.49, 61.6], ...circle(C[0], C[1], 3.65, 8, a0, a1), [20.2, 61.6]], GL, MAT.agg, P_, { layer: 3 });
-[rect(20.2, 60.0, 20.45, 63.85), rect(19.24, 60.6, 19.49, 61.6)].forEach(r => ground(r, GL, MAT.brick, P_, { layer: 2 })); // east border doubles as the lawn's brick edge
+ground([[20.2, ycx(20.2, 3.65)], [20.45, ycx(20.45, 3.65)], [20.45, 63.85], [20.2, 63.85]], GL, MAT.brick, P_, { layer: 2 }); // east border doubles as the lawn's brick edge; starts at the pergola's brick ring
+ground([[19.24, ycx(19.24, RB)], [19.49, ycx(19.49, RB)], [19.49, 61.6], [19.24, 61.6]], GL, MAT.brick, P_, { layer: 2 }); // west border starts at the ring path's outer brick
 [rect(18.2, 62.40, 20.2, 62.40 + PW), rect(19.49, 61.55, 20.2, 62.45)].forEach(r => ground(r, GL, MAT.agg, SQ, { layer: 3 }));
 [rect(19.24, 61.6, 19.49, 62.40), rect(18.2, 62.15, 19.49, 62.40), rect(18.2, 63.13, 20.45, 63.38)].forEach(r => ground(r, GL, MAT.brick, SQ, { layer: 2 }));
 curvedPath(filletLine([[19.845, 61.6], [19.845, 62.765], [18.2, 62.765]], [1.0]), CV);
 // parking per Rob's plan. Left bay: brick kerb, square to the house side, angled end falling toward the gate
 const visitorBay = [[31.5, 53.59], [32.62, 52.98], [33.43, 52.98], [35.16, 59.94], [31.5, 57.87]];
 const visitorBayIn = [[31.9, 53.84], [32.74, 53.38], [33.53, 53.38], [35.03, 59.43], [31.9, 57.65]];
-ground(rect(26.5, 48.3, 33.08, 51.42), GL, MAT.agg, P_, { layer: 3 }); // bay along the house front
+ground(rect(26.5, 48.3, 33.08, 51.42), GL, MAT.agg, SQ, { layer: 3 }); // bay along the house front
+ground([[26.5, 48.3], [33.08, 48.3], [33.08, 51.42], ...circle(27.5, 50.42, 1.0, 12, 90 * deg, 180 * deg)], GL, MAT.agg, CV, { layer: 3 }); // curved: its street-side corner rounded
 [[[33.0, 51.0], [39.0, 51.0], [39.0, 58.5], [34.85, 58.5], [33.04, 51.39]], [[39.0, 53.0], [40.35, 53.0], [40.45, 59.25], [39.0, 59.25]]].forEach(p => ground(p, GL, MAT.agg, P_, { layer: 2 }));
 ground([[40.35, 53.0], [southX(53.0) - 0.03, 53.0], [southX(59.25) - 0.03, 59.25], [40.45, 59.25]], GL, MAT.flag, P_, { layer: 2 }); // bluestone right up to the fence beside the bay
 ground(visitorBay, GL, MAT.brick, P_, { layer: 3 }); ground(visitorBayIn, GL, MAT.agg, P_, { layer: 4 });
-ground(rect(26.27, 51.42, 33.1, 51.67), GL, MAT.brick, P_, { layer: 4 }); ground(rect(26.27, 49.15, 26.52, 51.67), GL, MAT.brick, SQ, { layer: 4 }); // house-front bay's brick edge, continuing the path border
-ground(rect(26.27, 49.95, 26.52, 51.67), GL, MAT.brick, CV, { layer: 4 }); fillet([26.5, 49.15], [-1, 0], [0, 1], 0.8, CV, 4, 5); // curved: soften where the house path opens into the bay // house-front bay's brick edge, continuing the path border
+ground(rect(26.27, 51.42, 33.1, 51.67), GL, MAT.brick, SQ, { layer: 4 }); ground(rect(26.27, 49.15, 26.52, 51.67), GL, MAT.brick, SQ, { layer: 4 }); // house-front bay's brick edge, continuing the path border
+ground([[33.1, 51.42], [33.1, 51.67], ...circle(27.5, 50.42, 1.25, 12, 90 * deg, 180 * deg), [26.25, 49.95], [26.5, 49.95], ...circle(27.5, 50.42, 1.0, 12, 180 * deg, 90 * deg)], GL, MAT.brick, CV, { layer: 4 }); // curved: brick edge follows the rounded corner
+fillet([26.5, 49.15], [-1, 0], [0, 1], 0.8, CV, 4, 5); // curved: soften where the house path opens into the bay
 // entry: crazy-paved square stepping up to the verandah
 slab(rect(17.43, 45.5, 20.05, 48.15), GL, GL + 0.2, MAT.crazy, P_);
 // pedestrian entry: sunken landing, three steps up, low rendered retaining walls
@@ -993,12 +1002,21 @@ function lacePanel(a, b, yc, h, group) { const L = Math.hypot(b[0] - a[0], b[1] 
   egg.rotation.y = Math.atan2(57.3 - 60, 21.75 - 26); P_.add(egg); window.__egg = egg;
   box(20.7, 55.35, GL, 0.45, 0.45, 0.45, MAT.timberLight, P_);
 })();
+// steppers: down the west bed, then east towards the ring. Their corner turns square or on a curve with the Path corners option (Will's note)
 const stepperRects = [];
-for (let i = 0; i < 10; i++) stepperRects.push(rect(12.38, 49.6 + i * 0.735, 12.98, 50.2 + i * 0.735));
-[12.38, 13.1, 13.78, 14.47, 15.18, 15.87].forEach(x => stepperRects.push(rect(x, 56.2, x + 0.6, 56.8)));
+for (let i = 0; i < 7; i++) stepperRects.push(rect(12.38, 49.6 + i * 0.735, 12.98, 50.2 + i * 0.735));
+[14.47, 15.18, 15.87].forEach(x => stepperRects.push(rect(x, 56.2, x + 0.6, 56.8)));
 stepperRects.push(rect(17.99, 56.15, 18.6, 56.75));
 [11.93, 12.72, 13.5, 14.3].forEach(x => stepperRects.push(rect(x, 62.55, x + 0.6, 63.15)));
-[['pebble', MAT.agg], ['blue', MAT.blue]].forEach(([v, m]) => { const g = optGroup('steppers', v); stepperRects.forEach(r => slab(r, GL, GL + 0.05, m, g)); });
+const stepSq = [7, 8, 9].map(i => rect(12.38, 49.6 + i * 0.735, 12.98, 50.2 + i * 0.735)).concat([13.1, 13.78].map(x => rect(x, 56.2, x + 0.6, 56.8)));
+const stepCv = (() => { const line = filletLine([[12.68, 54.31], [12.68, 56.5], [14.77, 56.5]], [1.5], 32); const cum = [0]; for (let i = 1; i < line.length; i++) cum.push(cum[i - 1] + Math.hypot(line[i][0] - line[i - 1][0], line[i][1] - line[i - 1][1]));
+  const L = cum[cum.length - 1], out = [];
+  for (let k = 1; k <= 4; k++) { const sk = L * k / 5; let i = 1; while (cum[i] < sk) i++; const f = (sk - cum[i - 1]) / (cum[i] - cum[i - 1]), a = line[i - 1], b = line[i];
+    const cx = a[0] + (b[0] - a[0]) * f, cy = a[1] + (b[1] - a[1]) * f, l = Math.hypot(b[0] - a[0], b[1] - a[1]), tx = (b[0] - a[0]) / l * 0.3, ty = (b[1] - a[1]) / l * 0.3;
+    out.push([[cx - tx + ty, cy - ty - tx], [cx + tx + ty, cy + ty - tx], [cx + tx - ty, cy + ty + tx], [cx - tx - ty, cy - ty + tx]]); } return out; })(); // four steppers set square to the curve
+const stepZones = stepperRects.concat(stepSq, stepCv).map(r => { const xs = r.map(p => p[0]), ys = r.map(p => p[1]); return [Math.min(...xs) - 0.2, Math.min(...ys) - 0.2, Math.max(...xs) + 0.2, Math.max(...ys) + 0.2]; });
+[['pebble', MAT.agg], ['blue', MAT.blue]].forEach(([v, m]) => { const g = optGroup('steppers', v), gs = optGroup('steppers', v, SQ), gc = optGroup('steppers', v, CV);
+  stepperRects.forEach(r => slab(r, GL, GL + 0.05, m, g)); stepSq.forEach(r => slab(r, GL, GL + 0.05, m, gs)); stepCv.forEach(r => slab(r, GL, GL + 0.05, m, gc)); });
 (function bench(x0, y0, x1, y1) { const w = x1 - x0, d = y1 - y0; for (let i = 0; i < 5; i++) box(x0 + w * (i + 0.5) / 5, (y0 + y1) / 2, GL + 0.42, w / 5 - 0.02, d, 0.04, MAT.timberLight, P_); [[x0 + 0.05, y0 + 0.15], [x1 - 0.05, y0 + 0.15], [x0 + 0.05, y1 - 0.15], [x1 - 0.05, y1 - 0.15]].forEach(([x, y]) => box(x, y, GL, 0.06, 0.06, 0.42, MAT.timber, P_)); box(x0 + 0.03, (y0 + y1) / 2, GL + 0.46, 0.05, d, 0.42, MAT.timberLight, P_); })(11.76, 51.88, 12.23, 53.85);
 function birdbath(x, y, group) { const pts = [[0, 0], [0.2, 0], [0.2, 0.06], [0.1, 0.12], [0.08, 0.6], [0.14, 0.68], [0.42, 0.74], [0.44, 0.82], [0.3, 0.8], [0, 0.78]].map(p => new THREE.Vector2(p[0], p[1])); const b = new THREE.Mesh(new THREE.LatheGeometry(pts, 24), MAT.stone); b.position.set(x, GL, y); b.castShadow = true; group.add(b); const w = new THREE.Mesh(new THREE.CircleGeometry(0.3, 20), MAT.water); w.rotation.x = -Math.PI / 2; w.position.set(x, GL + 0.79, y); group.add(w); }
 // existing bunya pine, moved into the west garden bed (where the plan shows a small round feature)
@@ -1054,7 +1072,7 @@ function freeProp(x, y) {
   for (const r of [[17.9, 48.1, 19.4, 53.8], [26.3, 48.1, 33.2, 51.7], [14.8, 62.0, 19.7, 70], [32.0, 60.8, 35.6, 64], [17.3, 45.3, 22.3, 48.3], [11.55, 51.7, 12.45, 54.0], [17.4, 49.1, 20.1, 50.2], [25.6, 49.1, 26.6, 50.1], [18.3, 61.2, 19.3, 62.2]]) if (inRect(x, y, r)) return false;
   if (y < 49.45 && y > 45.4) return false;
   if (inPoly(x, y, visitorBay) || inPoly(x, y, gateLink) || inPoly(x, y, rampPoly)) return false;
-  for (const r of stepperRects) if (inRect(x, y, [r[0][0] - 0.2, r[0][1] - 0.2, r[2][0] + 0.2, r[2][1] + 0.2])) return false;
+  for (const z of stepZones) if (inRect(x, y, z)) return false;
   for (const t of allTreesP) if (dist(x, y, t) < 0.6) return false;
   if (dist(x, y, [15.79, 52.86]) < 1.9 || dist(x, y, [16.07, 60.95]) < 0.7) return false;
   if (Math.abs(dist(x, y, [16.6, 61.95]) - 2.0) < 0.3 && y < 62.0) return false;
@@ -1315,7 +1333,7 @@ $('#keyCollapse').onclick = () => { if (innerWidth <= 760) { $('#key').classList
 
 /* ============ design options UI ============ */
 function applyOpts() {
-  Object.entries(optGroups).forEach(([k, vs]) => Object.entries(vs).forEach(([v, g]) => { g.visible = OPT[k].val === v; }));
+  Object.entries(optGroups).forEach(([k, vs]) => Object.entries(vs).forEach(([v, gs]) => gs.forEach(g => { g.visible = OPT[k].val === v; })));
   document.querySelectorAll('#opts button').forEach(b => b.setAttribute('aria-pressed', OPT[b.dataset.k].val === b.dataset.v));
   try { const q = Object.entries(OPT).filter(([, o]) => o.val !== o.def).map(([k, o]) => k + '=' + o.val).join('&'); history.replaceState(null, '', q ? '#' + q : location.pathname + location.search); } catch (e) {}
 }
