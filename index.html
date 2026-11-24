@@ -843,6 +843,7 @@ const frontHedgePts = (x0, x1) => [[x0, frontY(x0) - 0.47], [x1, frontY(x1) - 0.
 // (hedge() runs each end on by a quarter of its width, so the start is set that much past the cut)
 hedge(frontHedgePts(17.37, 35.98), GL + 2.35, 0.92, G.today, { color: 0x3c5b2d, base: 0 });
 hedge(frontHedgePts(17.86 + 0.23, 35.98), GL + 2.35, 0.92, G.prop, { color: 0x3c5b2d, base: 0 });
+hedge(frontHedgePts(17.41 + 0.23, 17.9), GL + 2.35 - 1.15, 0.92, G.prop, { color: 0x3c5b2d, base: 1.15 }); // hedge kept over the top of the letterbox (Will)
 
 /* ============ neighbours (context) ============ */
 // north: single-storey, terracotta tiles, set well back from the fence (IMG_0683)
