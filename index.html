@@ -842,7 +842,7 @@ const frontHedgePts = (x0, x1) => [[x0, frontY(x0) - 0.47], [x1, frontY(x1) - 0.
 // between the two gates: whole today; in Proposed a section beside the pedestrian gate's right-hand pier is cut out for the letterbox
 // (hedge() runs each end on by a quarter of its width, so the start is set that much past the cut)
 hedge(frontHedgePts(17.37, 35.98), GL + 2.35, 0.92, G.today, { color: 0x3c5b2d, base: 0 });
-hedge(frontHedgePts(17.86 + 0.23, 35.98), GL + 2.35, 0.92, G.prop, { color: 0x3c5b2d, base: 0 });
+hedge(frontHedgePts(17.80 + 0.23, 35.98), GL + 2.35, 0.92, G.prop, { color: 0x3c5b2d, base: 0 });
 hedge(frontHedgePts(17.41 + 0.23, 17.9), GL + 2.35 - 1.15, 0.92, G.prop, { color: 0x3c5b2d, base: 1.15 }); // hedge kept over the top of the letterbox (Will)
 
 /* ============ neighbours (context) ============ */
@@ -961,22 +961,28 @@ slab(rect(17.43, 45.5, 20.05, 48.15), GL, GL + 0.2, MAT.crazy, P_);
 // pedestrian entry: sunken landing, three steps up, low rendered retaining walls
 ground([[15.06, 62.3], [17.26, 62.3], [17.26, frontY(17.26)], [15.06, frontY(15.06)]], 0.01, MAT.crazy, P_, { layer: 1 });
 [['brick', MAT.brick], ['blue', MAT.blue]].forEach(([v, m]) => { const g = optGroup('steps', v); [[17.26, 17.57, 0.15], [17.57, 17.88, 0.30], [17.88, 18.2, 0.45]].forEach(([a, b, h]) => slab(rect(a, 62.3, b, 63.9), 0, h, m, g)); });
-// parcel letterbox (380 W x 365 D x 1000 H, charcoal) built into the boundary beside the gate's right-hand pier, facing the street.
-// Set at footpath level with its front flush with the boundary, so the postie and parcels reach it from the footpath (Will)
+// parcel letterbox (charcoal, 450 W x 400 D x 1150 H) built into the boundary between the gate's right-hand pier and the cut hedge,
+// filling the opening: tight to the pier, tight to the hedge, its top flush with the underside of the hedge carried over it.
+// Footpath level, front flush with the hedge face, backlit street number at the top (power runs to the gate) (Will)
 const LB = (() => { const a = [10.7, 65.5], b = [41.4, 63.2], L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = -uy, ny = ux; // n points to the street
-  const t0 = (17.2 - a[0]) / ux + 0.21 + 0.02, tc = t0 + 0.19, c = [a[0] + ux * tc, a[1] + uy * tc];
-  const at = (s, d) => [c[0] + ux * s + nx * d, c[1] + uy * s + ny * d]; return { c, ux, uy, at, rot: Math.atan2(uy, ux) }; })();
+  const W = 0.45, D = 0.40, Hh = 1.15, t0 = (17.2 - a[0]) / ux + 0.21, tc = t0 + W / 2, c = [a[0] + ux * tc, a[1] + uy * tc];
+  const at = (s, d) => [c[0] + ux * s + nx * d, c[1] + uy * s + ny * d]; return { c, ux, uy, at, W, D, H: Hh, rot: Math.atan2(uy, ux) }; })();
+const addrMat = (() => { const [c, x] = cnv(512, 200); x.fillStyle = '#111214'; x.fillRect(0, 0, 512, 200); x.fillStyle = '#ffffff'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = '600 132px Georgia, "Times New Roman", serif'; x.fillText('20', 256, 92); x.font = '500 30px Georgia, serif'; x.fillText('HILLCREST AVENUE', 256, 172);
+  const t = toTex(c); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; return new THREE.MeshStandardMaterial({ color: 0x1a1b1d, map: t, emissive: 0xffe6b8, emissiveMap: t, emissiveIntensity: 0.5, roughness: 0.4 }); })();
 (function letterbox() { const g = new THREE.Group(); g.position.set(LB.c[0], 0, LB.c[1]); g.rotation.y = -LB.rot; // local x along the boundary, +z to the street
   const body = mat(0x2a2b2d, { roughness: 0.5, metalness: 0.25 }), dark = mat(0x0e0e0f, { roughness: 0.8 }), lid = mat(0x232426, { roughness: 0.45, metalness: 0.3 });
-  const add = (w, h, d, x, y, z, m, cast = true) => { const me = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); me.position.set(x, y, z); me.castShadow = cast; me.receiveShadow = true; g.add(me); };
-  add(0.38, 0.975, 0.365, 0, 0.4875, -0.1825 + 0.01, body); add(0.40, 0.025, 0.385, 0, 0.9875, -0.1825 + 0.01, lid); // cabinet and top
-  add(0.32, 0.075, 0.02, 0, 0.895, 0.02, lid, false); add(0.32, 0.05, 0.02, 0, 0.83, 0.012, dark, false); // letters flap over the 70 mm slot
-  add(0.33, 0.78, 0.012, 0, 0.405, 0.022, body, false); // parcel door
-  for (let k = 1; k < 10; k++) add(0.32, 0.005, 0.004, 0, 0.405 - 0.39 + k * 0.078, 0.03, dark, false); // horizontal grooves
-  const lock = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.01, 12), mat(0xbfc2c4, { metalness: 0.8, roughness: 0.3 })); lock.rotation.x = Math.PI / 2; lock.position.set(0.02, 0.76, 0.032); g.add(lock);
+  const add = (w, h, d, x, y, z, m, cast = true) => { const me = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); me.position.set(x, y, z); me.castShadow = cast; me.receiveShadow = true; g.add(me); return me; };
+  const W = LB.W, D = LB.D, Hh = LB.H, fw = W - 0.06; // front panels sit inside a 30 mm frame
+  add(W, Hh, D, 0, Hh / 2, -D / 2 + 0.01, body); // cabinet
+  add(fw, 0.15, 0.014, 0, Hh - 0.105, 0.017, dark, false); const num = add(fw - 0.03, 0.12, 0.004, 0, Hh - 0.105, 0.026, addrMat, false); // backlit number panel
+  add(fw, 0.08, 0.02, 0, Hh - 0.25, 0.02, lid, false); add(fw, 0.055, 0.02, 0, Hh - 0.32, 0.012, dark, false); // letters flap over the slot
+  const dh = Hh - 0.42; add(fw, dh, 0.012, 0, 0.04 + dh / 2, 0.022, body, false); // parcel door
+  for (let k = 1; k < 11; k++) add(fw - 0.01, 0.005, 0.004, 0, 0.04 + k * dh / 11, 0.03, dark, false); // horizontal grooves
+  const lock = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.01, 12), mat(0xbfc2c4, { metalness: 0.8, roughness: 0.3 })); lock.rotation.x = Math.PI / 2; lock.position.set(0.03, 0.04 + dh - 0.06, 0.032); g.add(lock);
   P_.add(g); })();
 // raised bed behind the hedge line, notched round the letterbox
-slab([[17.26, 63.9], [18.2, 63.9], [18.2, frontY(18.2)], LB.at(0.23, 0), LB.at(0.23, -0.4), LB.at(-0.23, -0.4), LB.at(-0.23, 0), [17.26, frontY(17.26)]], 0, GL, MAT.mulch, P_);
+slab([[17.26, 63.9], [18.2, 63.9], [18.2, frontY(18.2)], LB.at(LB.W / 2 + 0.01, 0), LB.at(LB.W / 2 + 0.01, -LB.D - 0.03), LB.at(-LB.W / 2 - 0.01, -LB.D - 0.03), LB.at(-LB.W / 2 - 0.01, 0), [17.26, frontY(17.26)]], 0, GL, MAT.mulch, P_);
 wallLine([[15.06, 62.2], [17.3, 62.2]], 0, GL + 0.08, 0.2, MAT.render, P_);
 wallLine([[14.96, 62.2], [14.96, frontY(14.96) - 0.35]], 0, GL + 0.08, 0.2, MAT.render, P_);
 (function screen() { const S = [16.6, 61.95], r = 2.0, a0 = 180 * deg, a1 = 315 * deg; const n = Math.round(r * (a1 - a0) / 0.085);
@@ -1118,6 +1124,7 @@ ground(rect(17.6, 45.44, 20.21, 47.2), GL, MAT.agg, T_, { layer: 3 });
 edgeStrip([[20.3, 47.08], [27.9, 47.08], [27.9, 48.28], [32.95, 48.28]], T_);
 // bluestone crazy-paving border on the lawn side, and bands across the aggregate dividing it into panels (IMG_0691, IMG_0693)
 ground(ribbon([[17.6, 51.3], [32.95, 51.3]], 0.6), GL, MAT.flag, T_, { layer: 4 });
+ground(ribbon([[17.85, 48.78], [17.85, 51.3]], 0.5), GL, MAT.flag, T_, { layer: 4 }); // and along its west side where the lawn meets it (walk-around video)
 [[[21.6, 47.0], [21.6, 51.0]], [[27.9, 48.2], [27.9, 51.0]]].forEach(b => ground(ribbon(b, 0.5), GL, MAT.flag, T_, { layer: 4 }));
 // main driveway: SD-06 shows it widening from the drive gate to the garage forecourt
 const leftEdge = y => 33.45 + (y - 51) / 7.5 * 1.45;
@@ -1126,19 +1133,24 @@ ground(todayDrive, GL, MAT.agg, T_, { layer: 2 });
 edgeStrip([[33.45, 51.1], [34.9, 58.5]], T_);
 slab(rect(17.6, 45.44, 20.0, 46.3), GL, GL + 0.2, MAT.blue, T_);
 // lawn with its red-brick mowing edge
-const todayLawn = [[12.1, 49.2], [13.3, 48.2], [17.45, 48.2], [17.5, 51.65], [31.0, 51.65], [31.4, 53.5], [31.0, 57.5], [28.3, 60.6], [24.0, 61.8], [19.6, 62.2], [17.6, 62.9], [14.4, 62.8], [12.7, 60.8], [11.95, 56.5], [11.7, 52.0]];
+// lawn: runs straight up to the brick path round the box hedge, the driveway's bluestone border and the east path; no separate brick edge on those sides (Will's notes)
+const HC = [13.75, 46.2], HR = 2.15; // the brick path follows the existing box hedge's curve (hedge r 1.5 about HC), hard against it
+const todayLawn = [...circle(HC[0], HC[1], HR + 0.425, 10, 140 * deg, 90 * deg), [17.5, 48.775], [17.5, 51.65], [31.0, 51.65], [31.4, 53.5], [31.03, 57.5], [30.21, 60.13], [29.21, 62.36], [24.0, 61.8], [19.6, 62.2], [17.6, 62.9], [14.4, 62.8], [12.7, 60.8], [11.95, 56.5], [11.7, 52.0]];
 const circPave = [C[0], C[1]], circR = 2.2; // existing bluestone crazy-paving circle: same spot as in Proposed
 const cdx = C[0] - 16.0, cdy = C[1] - 60.5; // birdbath, bench and pedestal keep their places on the circle
 ground(todayLawn, GL, MAT.lawn, T_, { layer: 1 });
-ground(ribbon(todayLawn.concat([todayLawn[0]]), 0.3), GL, MAT.brick, T_, { layer: 2 });
+ground(ribbon([[29.21, 62.36], [24.0, 61.8], [19.6, 62.2], [17.6, 62.9], [14.4, 62.8], [12.7, 60.8], [11.95, 56.5], [11.7, 52.0], [11.78, 47.86]], 0.3), GL, MAT.brick, T_, { layer: 2 }); // brick mowing edge only along the street and west beds
 // existing brick paths (from the photos and the walk-around video)
 const fy = x => frontY(x) - 1.55;
 const brickPaths = [
-  [[17.6, 49.6], [16.0, 49.95], [14.2, 49.5], [12.6, 48.5], [11.5, 47.3], [11.25, 46.2], [11.2, 44.0], [11.15, 38.3], [northX(37.8) + 0.3, 37.8]],
-  [[11.5, 48.6], [10.7, 51.5], [10.5, 56.0], [10.9, 60.0], [12.2, 62.6], [14.3, fy(14.3)]],
-  [[14.3, fy(14.3)], [18.0, fy(18.0)], [22.0, fy(22.0)], [26.0, fy(26.0)], [29.6, fy(29.6)]],
+  // from the forecourt, hard against the box hedge, round its curve and up the north side to the side gate
+  [[17.6, 48.35], [13.75, 48.35], ...circle(HC[0], HC[1], HR, 12, 90 * deg, 180 * deg).slice(1), [11.6, 38.3], [northX(37.8) + 0.3, 37.8]],
+  // from the hedge's curve straight out through the middle of the lawn to the pedestrian gate
+  [[12.1, 47.58], [12.7, 49.6], [13.5, 52.5], [14.4, 55.5], [15.3, 58.5], [16.0, 61.0], [16.4, fy(16.4)]],
+  [[16.0, fy(16.0)], [18.0, fy(18.0)], [22.0, fy(22.0)], [26.0, fy(26.0)], [29.6, fy(29.6)]],
   [[16.45, frontY(16.45) - 0.2], [16.4, fy(16.4)]],
-  [[29.6, fy(29.6)], [31.6, 61.0], [32.6, 58.0], [32.7, 54.5], [32.2, 52.0]],
+  // east path along the lawn's edge, hard up against the grass
+  [[29.6, fy(29.6)], [30.6, 60.3], [31.45, 57.5], [31.83, 53.5], [31.45, 51.75]],
 ];
 brickPaths.forEach(p => ground(ribbon(p, 0.85), GL, MAT.brick, T_, { layer: 3 }));
 // circular bluestone crazy paving with birdbath, stone bench and pedestal on its far side
@@ -1211,6 +1223,7 @@ function setSun(month, hour) {
   skyU.top.value.copy(top); skyU.hor.value.copy(hor); scene.fog.color.copy(hor);
   sun.color.setHSL(0.09, 0.65, lerp(0.72, 0.94, day));
   MAT.lamp.emissiveIntensity = night > 0.2 || el < 3 * deg ? 2.5 : 0.4;
+  addrMat.emissiveIntensity = night > 0.2 || el < 3 * deg ? 2.2 : 0.5; // street number lights up at dusk
 }
 function fmtHour(h) { const hh = Math.floor(h), mm = Math.round((h - hh) * 60); const ap = hh >= 12 ? 'pm' : 'am'; const h12 = ((hh + 11) % 12) + 1; return `${h12}:${String(mm).padStart(2, '0')} ${ap}`; }
 
