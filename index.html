@@ -252,7 +252,7 @@ import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometr
 const $ = s => document.querySelector(s);
 const deg = Math.PI / 180;
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
-const rnd = mulberry32(20261123);
+let rndImpl = mulberry32(20261123); const rnd = () => rndImpl();
 const R = (a, b) => a + (b - a) * rnd();
 const pick = arr => arr[Math.floor(rnd() * arr.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -485,7 +485,10 @@ function glazedWall(group, a, b, base, top, spacing = 0.62) {
 /* ============ plants ============ */
 // Foliage is built from a lumpy textured core plus a shell of alpha-cut leaf-cluster cards.
 // Detail uses its own random stream so plant positions elsewhere stay put.
-const frnd = mulberry32(7771);
+let frndImpl = mulberry32(7771); const frnd = () => frndImpl();
+// Extras that exist only in design options draw from their own streams, so everything else (Today included) keeps its exact look
+function withRng(seed, fn) { const a = rndImpl, b = frndImpl; rndImpl = mulberry32(seed); frndImpl = mulberry32(seed + 1); try { return fn(); } finally { rndImpl = a; frndImpl = b; } }
+MAT.pavers = tmat(withRng(5150, () => { const [c, x] = cnv(256); noiseFill(x, 256, 256, [100, 146, 58], 24, [90, 136, 52]); specks(x, 256, 256, ['#7fa84e', '#557e36', '#6b9443'], 1400, 2); x.fillStyle = 'rgba(178,172,160,0.8)'; for (let i = 0; i < 256; i += 32) { x.fillRect(i, 0, 5, 256); x.fillRect(0, i, 256, 5); } return toTex(c); }), 1.2); // grass pavers: lawn over a faint concrete grid
 const FR = (a, b) => a + (b - a) * frnd();
 function hash3(x, y, z) { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(z | 0, 1440662683); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 function vnoise(x, y, z) { const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), s = t => t * t * (3 - 2 * t); const u = s(x - xi), v = s(y - yi), w = s(z - zi); const c = (i, j, k) => hash3(xi + i, yi + j, zi + k);
@@ -875,15 +878,33 @@ const OPT = {
   hedge: { label: 'New box hedge height', choices: [['60', '60 cm'], ['90', '90 cm']], def: '60' },
   steppers: { label: 'Steppers', choices: [['pebble', 'Granite pebble'], ['blue', 'Bluestone']], def: 'pebble' },
   steps: { label: 'Gate steps', choices: [['brick', 'Reclaimed brick'], ['blue', 'Bluestone']], def: 'brick' },
+  lawn: { label: 'Front lawn', choices: [['rob', 'Half-moon (Rob)'], ['drive', 'To the driveway']], def: 'rob' },
+  bay: { label: 'Visitor parking bay', choices: [['rob', 'Parking (Rob)'], ['pavers', 'Grass pavers'], ['removed', 'Removed']], def: 'rob' },
+  route: { label: 'Gate to front door', choices: [['rob', 'Round the pergola (Rob)'], ['through', 'Through the pergola'], ['lit', "Rob's, lit"]], def: 'rob' },
+  bunya: { label: 'Bunya pine', choices: [['rob', 'Bunya (Rob)'], ['replaced', 'Smaller tree']], def: 'rob' },
 };
 Object.values(OPT).forEach(o => o.val = o.def);
 const optGroups = {};
 function optGroup(key, val, parent = P_) { const g = new THREE.Group(); parent.add(g); ((optGroups[key] ||= {})[val] ||= []).push(g); return g; }
 const pergMat = MAT.timber.clone();
+const LR = optGroup('lawn', 'rob'), LD = optGroup('lawn', 'drive');
 const lawnPoly = [[19.38, 49.4], [23.18, 49.4], ...circle(C[0], C[1], 7.4, 48, -74.4 * deg, 72.8 * deg), [20.45, 63.6], ...circle(C[0], C[1], 3.65, 48, 101.7 * deg, -119.7 * deg)]; // brick-edged all round, runs up to the pergola's brick ring (Rob's plan)
-ground(lawnPoly, GL, MAT.lawn, P_, { layer: 1 });
-ground(ribbon(circle(C[0], C[1], 7.525, 48, -74.4 * deg, 72.8 * deg), 0.25), GL, MAT.brick, P_, { layer: 2 });
-ground(rect(20.2, 63.6, 23.45, 63.85), GL, MAT.brick, P_, { layer: 2 }); // lawn's street-side brick edge, joining the curved edge
+ground(lawnPoly, GL, MAT.lawn, LR, { layer: 1 });
+ground(ribbon(circle(C[0], C[1], 7.525, 48, -74.4 * deg, 72.8 * deg), 0.25), GL, MAT.brick, LR, { layer: 2 });
+ground(rect(20.2, 63.6, 23.45, 63.85), GL, MAT.brick, LR, { layer: 2 }); // lawn's street-side brick edge, joining the curved edge
+// Lawn to the driveway (design option): one lawn from the pergola ring to the driveway, brick-edged all round like Rob's.
+// A small bed stays in the corner by the house-front parking bay. The visitor bay, when kept, sits on top of it.
+const laneX = y => 33.04 + (y - 51.39) * 0.248, lawnStreetY = x => frontY(x) - 1.17; // driveway lane's west edge; lawn's street edge (Rob's is 63.6 at the gate path)
+const lawnDrive = [[19.38, 49.4], [23.2, 49.4], [26.1, 51.67], [laneX(51.67), 51.67], [laneX(58.5), 58.5], [35.4, 60.85], [31.95, 60.85], [31.95, lawnStreetY(31.95)], [20.45, lawnStreetY(20.45)], ...circle(C[0], C[1], 3.65, 48, 101.7 * deg, -119.7 * deg)];
+ground(lawnDrive, GL, MAT.lawn, LD, { layer: 1 });
+function lawnEdge(pts, group, poly, w = 0.25, layer = 2) { // brick strip just inside a lawn edge
+  for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]); let nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L;
+    if (!inPoly((a[0] + b[0]) / 2 + nx * 0.1, (a[1] + b[1]) / 2 + ny * 0.1, poly)) { nx = -nx; ny = -ny; }
+    ground([a, b, [b[0] + nx * w, b[1] + ny * w], [a[0] + nx * w, a[1] + ny * w]], GL, MAT.brick, group, { layer }); } }
+lawnEdge([[laneX(51.67), 51.67], [laneX(58.5), 58.5], [35.4, 60.85], [31.95, 60.85], [31.95, lawnStreetY(31.95)]], LD, lawnDrive); // brick mowing strip against the driveway and the bin area
+lawnEdge([[23.2, 49.4], [26.1, 51.67]], LD, lawnDrive); // edge of the corner bed by the house-front bay
+ground(rect(26.1, 51.42, 27.5, 51.67), GL, MAT.brick, LD, { layer: 5 }); // closes the gap where the bay's corner is rounded
+ground([[20.2, lawnStreetY(20.2)], [31.95, lawnStreetY(31.95)], [31.95, lawnStreetY(31.95) + 0.25], [20.2, lawnStreetY(20.2) + 0.25]], GL, MAT.brick, LD, { layer: 2 }); // street-side brick edge, as Rob's
 ground(circle(C[0], C[1], 2.2), GL, MAT.crazy, P_, { layer: 3 });
 ground(circle(C[0], C[1], 3.45), GL, MAT.dg, P_, { layer: 1, holes: [circle(C[0], C[1], 2.2)] });
 // Paths: the existing granite pebble mix (exposed aggregate), bordered with reclaimed red bricks.
@@ -917,8 +938,6 @@ ground(circle(C[0], C[1], 3.65), GL, MAT.brick, P_, { layer: 2, holes: [circle(C
 const acx = (x, r, rear = false) => { const a = Math.acos((x - C[0]) / r); return rear ? 2 * Math.PI - a : a; }; // angle where circle r crosses x
 const ycx = (x, r, rear = false) => C[1] + (rear ? -1 : 1) * Math.sqrt(r * r - (x - C[0]) ** 2);
 const RP = 3.65 + PW, RB = 3.65 + PW + BR;
-ground([...circle(C[0], C[1], RP, 40, acx(20.2, RP), acx(18.40 + PW, RP, true)), ...circle(C[0], C[1], 3.65, 40, acx(18.40 + PW, 3.65, true), acx(20.2, 3.65))], GL, MAT.agg, P_, { layer: 3 });
-ground([...circle(C[0], C[1], RB, 40, acx(19.49, RB), acx(18.40, RB, true)), ...circle(C[0], C[1], RP, 40, acx(18.40, RP, true), acx(19.49, RP))], GL, MAT.brick, P_, { layer: 2 });
 // straight paths: house front, west side, spur to the side gate
 const SPX = 11.01; // west side path, moved 0.71 m east to run close to the existing box hedge (Will's note)
 [rect(SPX, 48.42, 26.5, 48.42 + PW), rect(SPX, 37.45, SPX + PW, 48.42), rect(northX(37.8) + 0.3, 37.45, SPX, 37.45 + PW)].forEach(p => pebblePath(p, SQ));
@@ -932,19 +951,59 @@ curvedPath(filletLine([[northX(37.8) + 0.3, SGC], [SPC, SGC], [SPC, FPC], [26.5,
     const cut = off.findIndex(q => q[1] > 48 && q[0] > 12.25); const a = off[cut - 1], b = off[cut], f = (12.25 - a[0]) / (b[0] - a[0]);
     wallLine([...off.slice(0, cut), [12.25, a[1] + (b[1] - a[1]) * f]], GL - 0.05, 0.16, 0.035, corten, CV, false); } // drawn a little thicker than real 5 mm edging so it reads in the model
   hedge([[northX(38.9) + 0.45, 38.9], [northX(49.3) + 0.45, 49.3]], 2.1, 0.7, P_, { color: 0x3d6a33, grow: true }); }
-// north path from the house path down into the ring path (its brick borders stop at the ring)
-ground(rect(18.40, 49.15, 18.40 + PW, 53.5), GL, MAT.agg, P_, { layer: 3 });
-ground([[18.15, 49.15], [18.40, 49.15], [18.40, ycx(18.40, RB, true)], [18.15, ycx(18.15, RB, true)]], GL, MAT.brick, P_, { layer: 2 }); // west border runs into the ring path's outer brick
-ground([[19.13, 49.15], [19.38, 49.15], [19.38, ycx(19.38, 3.65, true)], [19.13, ycx(19.13, 3.65, true)]], GL, MAT.brick, P_, { layer: 2 }); // east border runs into the pergola's brick ring
-fillet([18.40, 49.15], [-1, 0], [0, 1], 0.9, CV); fillet([18.40 + PW, 49.15], [1, 0], [0, 1], 0.9, CV); // curved: soften the T where it leaves the house path
-// gate path: L-shape. Up from the gate steps (east), then north to the pergola ring
-const a0 = Math.acos((19.49 - C[0]) / 3.65), a1 = Math.acos((20.2 - C[0]) / 3.65);
-ground([[19.49, 61.6], ...circle(C[0], C[1], 3.65, 8, a0, a1), [20.2, 61.6]], GL, MAT.agg, P_, { layer: 3 });
-ground([[20.2, ycx(20.2, 3.65)], [20.45, ycx(20.45, 3.65)], [20.45, 63.85], [20.2, 63.85]], GL, MAT.brick, P_, { layer: 2 }); // east border doubles as the lawn's brick edge; starts at the pergola's brick ring
-ground([[19.24, ycx(19.24, RB)], [19.49, ycx(19.49, RB)], [19.49, 61.6], [19.24, 61.6]], GL, MAT.brick, P_, { layer: 2 }); // west border starts at the ring path's outer brick
-[rect(18.2, 62.40, 20.2, 62.40 + PW), rect(19.49, 61.55, 20.2, 62.45)].forEach(r => ground(r, GL, MAT.agg, SQ, { layer: 3 }));
-[rect(19.24, 61.6, 19.49, 62.40), rect(18.2, 62.15, 19.49, 62.40), rect(18.2, 63.13, 20.45, 63.38)].forEach(r => ground(r, GL, MAT.brick, SQ, { layer: 2 }));
-curvedPath(filletLine([[19.845, 61.6], [19.845, 62.765], [18.2, 62.765]], [1.0]), CV);
+// Rob's route from the gate: L-shaped gate path, round the west side of the pergola on the ring path, then up the north path
+// to the house path. Built once for 'Round the pergola (Rob)' and again for "Rob's, lit" (design option).
+function robRoute(g) { const sq = optGroup('corners', 'square', g), cv = optGroup('corners', 'curved', g);
+  ground([...circle(C[0], C[1], RP, 40, acx(20.2, RP), acx(18.40 + PW, RP, true)), ...circle(C[0], C[1], 3.65, 40, acx(18.40 + PW, 3.65, true), acx(20.2, 3.65))], GL, MAT.agg, g, { layer: 3 });
+  ground([...circle(C[0], C[1], RB, 40, acx(19.49, RB), acx(18.40, RB, true)), ...circle(C[0], C[1], RP, 40, acx(18.40, RP, true), acx(19.49, RP))], GL, MAT.brick, g, { layer: 2 });
+  // north path from the house path down into the ring path (its brick borders stop at the ring)
+  ground(rect(18.40, 49.15, 18.40 + PW, 53.5), GL, MAT.agg, g, { layer: 3 });
+  ground([[18.15, 49.15], [18.40, 49.15], [18.40, ycx(18.40, RB, true)], [18.15, ycx(18.15, RB, true)]], GL, MAT.brick, g, { layer: 2 }); // west border runs into the ring path's outer brick
+  ground([[19.13, 49.15], [19.38, 49.15], [19.38, ycx(19.38, 3.65, true)], [19.13, ycx(19.13, 3.65, true)]], GL, MAT.brick, g, { layer: 2 }); // east border runs into the pergola's brick ring
+  fillet([18.40, 49.15], [-1, 0], [0, 1], 0.9, cv); fillet([18.40 + PW, 49.15], [1, 0], [0, 1], 0.9, cv); // curved: soften the T where it leaves the house path
+  // gate path: L-shape. Up from the gate steps (east), then north to the pergola ring
+  const a0 = Math.acos((19.49 - C[0]) / 3.65), a1 = Math.acos((20.2 - C[0]) / 3.65);
+  ground([[19.49, 61.6], ...circle(C[0], C[1], 3.65, 8, a0, a1), [20.2, 61.6]], GL, MAT.agg, g, { layer: 3 });
+  ground([[20.2, ycx(20.2, 3.65)], [20.45, ycx(20.45, 3.65)], [20.45, 63.85], [20.2, 63.85]], GL, MAT.brick, g, { layer: 2 }); // east border doubles as the lawn's brick edge; starts at the pergola's brick ring
+  ground([[19.24, ycx(19.24, RB)], [19.49, ycx(19.49, RB)], [19.49, 61.6], [19.24, 61.6]], GL, MAT.brick, g, { layer: 2 }); // west border starts at the ring path's outer brick
+  [rect(18.2, 62.40, 20.2, 62.40 + PW), rect(19.49, 61.55, 20.2, 62.45)].forEach(r => ground(r, GL, MAT.agg, sq, { layer: 3 }));
+  [rect(19.24, 61.6, 19.49, 62.40), rect(18.2, 62.15, 19.49, 62.40), rect(18.2, 63.13, 20.45, 63.38)].forEach(r => ground(r, GL, MAT.brick, sq, { layer: 2 }));
+  curvedPath(filletLine([[19.845, 61.6], [19.845, 62.765], [18.2, 62.765]], [1.0]), cv);
+}
+robRoute(optGroup('route', 'rob')); robRoute(optGroup('route', 'lit'));
+// Through the pergola (design option): the gate path runs on from the steps to the pergola's centre line, crosses the pergola floor
+// and carries straight on to the house path, landing at the pond beside the entry (gate, pergola centre and pond line up).
+// Rob's ring path and north path go; the swing moves to the lawn side of the pergola.
+const XP0 = C[0] - PW / 2, XP1 = C[0] + PW / 2; // pebble edges of the cross path
+(function throughRoute() { const g = optGroup('route', 'through'), sq = optGroup('corners', 'square', g), cv = optGroup('corners', 'curved', g);
+  const ys = x => ycx(x, 3.65), yr = x => ycx(x, 3.65, true);
+  // street side, square corner: straight up from the ring, then west along the gate path to the steps
+  ground([[XP0, ys(XP0)], [XP1, ys(XP1)], [XP1, 62.40], [XP0, 62.40]], GL, MAT.agg, sq, { layer: 3 });
+  ground([[XP0 - BR, ys(XP0 - BR)], [XP0, ys(XP0)], [XP0, 62.15], [XP0 - BR, 62.15]], GL, MAT.brick, sq, { layer: 2 });
+  ground([[XP1, ys(XP1)], [XP1 + BR, ys(XP1 + BR)], [XP1 + BR, 63.38], [XP1, 63.38]], GL, MAT.brick, sq, { layer: 2 });
+  ground(rect(18.2, 62.40, XP1, 62.40 + PW), GL, MAT.agg, sq, { layer: 3 });
+  ground(rect(18.2, 62.15, XP0, 62.40), GL, MAT.brick, sq, { layer: 2 }); ground(rect(18.2, 63.13, XP1 + BR, 63.38), GL, MAT.brick, sq, { layer: 2 });
+  // street side, curved corner
+  curvedPath(filletLine([[C[0], ys(C[0]) - 0.05], [C[0], 62.765], [18.2, 62.765]], [1.0]), cv);
+  // house side: from the ring to the house path, softened where it meets it when corners are curved
+  ground([[XP0, 49.15], [XP1, 49.15], [XP1, yr(XP1)], [XP0, yr(XP0)]], GL, MAT.agg, g, { layer: 3 });
+  ground([[XP0 - BR, 49.15], [XP0, 49.15], [XP0, yr(XP0)], [XP0 - BR, yr(XP0 - BR)]], GL, MAT.brick, g, { layer: 2 });
+  ground([[XP1, 49.15], [XP1 + BR, 49.15], [XP1 + BR, yr(XP1 + BR)], [XP1, yr(XP1)]], GL, MAT.brick, g, { layer: 2 });
+  fillet([XP0, 49.15], [-1, 0], [0, 1], 0.9, cv); fillet([XP1, 49.15], [1, 0], [0, 1], 0.9, cv);
+  // west of the cross path is bed, not lawn: the lawn wedge by the house path and the sliver by the gate path
+  const w = XP0 - BR;
+  ground([[19.3, 49.4], [w, 49.4], [w, yr(w)], ...circle(C[0], C[1], 3.65, 12, acx(w, 3.65, true), acx(19.3, 3.65, true)), [19.3, yr(19.3)]], GL, MAT.mulch, g, { layer: 1.5 });
+  ground([[20.44, ys(20.44)], [w, ys(w)], [w, 62.15], [20.44, 62.15]], GL, MAT.mulch, g, { layer: 1.5 });
+  ground(rect(20.45, 63.38, XP1 + BR, 63.6), GL, MAT.brick, g, { layer: 1.5 }); // closes the lawn strip between the gate path and the street brick
+})();
+// Rob's route, lit (design option): a lantern post at each end and low path lights round the pergola, glowing from dusk
+const litSpots = [[18.35, 61.95], [17.85, 49.7], [18.38, 60.54], [16.31, 56.1], [17.18, 53.72]];
+(function litRoute() { const g = optGroup('route', 'lit');
+  const lantern = (x, y) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.07, 2.1, 10), MAT.iron); c.position.set(x, GL + 1.05, y); c.castShadow = true; g.add(c);
+    box(x, y, GL + 2.1, 0.22, 0.22, 0.3, MAT.lamp, g); const r = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.18, 4), MAT.iron); r.position.set(x, GL + 2.49, y); r.rotation.y = Math.PI / 4; g.add(r); };
+  const bollard = (x, y) => { box(x, y, GL, 0.09, 0.09, 0.55, MAT.iron, g, { cast: false }); box(x, y, GL + 0.55, 0.13, 0.13, 0.08, MAT.lamp, g, { cast: false }); box(x, y, GL + 0.63, 0.16, 0.16, 0.03, MAT.iron, g, { cast: false }); };
+  litSpots.forEach(([x, y], i) => (i < 2 ? lantern : bollard)(x, y));
+})();
 // parking per Rob's plan. Left bay: brick kerb, square to the house side, angled end falling toward the gate
 const visitorBay = [[31.5, 53.59], [32.62, 52.98], [33.43, 52.98], [35.16, 59.94], [31.5, 57.87]];
 const visitorBayIn = [[31.9, 53.84], [32.74, 53.38], [33.53, 53.38], [35.03, 59.43], [31.9, 57.65]];
@@ -952,7 +1011,9 @@ ground(rect(26.5, 48.3, 33.08, 51.42), GL, MAT.agg, SQ, { layer: 3 }); // bay al
 ground([[26.5, 48.3], [33.08, 48.3], [33.08, 51.42], ...circle(27.5, 50.42, 1.0, 12, 90 * deg, 180 * deg)], GL, MAT.agg, CV, { layer: 3 }); // curved: its street-side corner rounded
 [[[33.0, 51.0], [39.0, 51.0], [39.0, 58.5], [34.85, 58.5], [33.04, 51.39]], [[39.0, 53.0], [40.35, 53.0], [40.45, 59.25], [39.0, 59.25]]].forEach(p => ground(p, GL, MAT.agg, P_, { layer: 2 }));
 ground([[40.35, 53.0], [southX(53.0) - 0.03, 53.0], [southX(59.25) - 0.03, 59.25], [40.45, 59.25]], GL, MAT.flag, P_, { layer: 2 }); // bluestone right up to the fence beside the bay
-ground(visitorBay, GL, MAT.brick, P_, { layer: 3 }); ground(visitorBayIn, GL, MAT.agg, P_, { layer: 4 });
+{ const br = optGroup('bay', 'rob'), bp = optGroup('bay', 'pavers'); // visitor bay (design option): Rob's, grass pavers, or removed (bed or lawn)
+  ground(visitorBay, GL, MAT.brick, br, { layer: 3 }); ground(visitorBayIn, GL, MAT.agg, br, { layer: 4 });
+  ground(visitorBay, GL, MAT.brick, bp, { layer: 3 }); ground(visitorBayIn, GL, MAT.pavers, bp, { layer: 4 }); }
 ground(rect(26.27, 51.42, 33.1, 51.67), GL, MAT.brick, SQ, { layer: 4 }); ground(rect(26.27, 49.15, 26.52, 51.67), GL, MAT.brick, SQ, { layer: 4 }); // house-front bay's brick edge, continuing the path border
 ground([[33.1, 51.42], [33.1, 51.67], ...circle(27.5, 50.42, 1.25, 12, 90 * deg, 180 * deg), [26.25, 49.95], [26.5, 49.95], ...circle(27.5, 50.42, 1.0, 12, 180 * deg, 90 * deg)], GL, MAT.brick, CV, { layer: 4 }); // curved: brick edge follows the rounded corner
 fillet([26.5, 49.15], [-1, 0], [0, 1], 0.8, CV, 4, 5); // curved: soften where the house path opens into the bay
@@ -1025,8 +1086,11 @@ function lacePanel(a, b, yc, h, group) { const L = Math.hypot(b[0] - a[0], b[1] 
   const shell = new THREE.Mesh(new THREE.SphereGeometry(0.58, 28, 18, Math.PI + 0.75, Math.PI * 2 - 1.5, 0, Math.PI * 0.93), mat(0xffffff, { map: wt, side: THREE.DoubleSide, roughness: 0.85 })); shell.scale.set(1, 1.35, 1); shell.castShadow = true; egg.add(shell);
   const cush = new THREE.Mesh(new THREE.SphereGeometry(0.4, 18, 12), mat(0xe9e3d6)); cush.scale.set(1, 0.45, 1); cush.position.y = -0.35; egg.add(cush);
   const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.25, 5), MAT.iron); chain.position.y = 1.4; egg.add(chain);
-  egg.rotation.y = Math.atan2(57.3 - 60, 21.75 - 26); P_.add(egg); window.__egg = egg;
-  box(20.7, 55.35, GL, 0.45, 0.45, 0.45, MAT.timberLight, P_);
+  egg.rotation.y = Math.atan2(57.3 - 60, 21.75 - 26); optGroup('route', 'rob').add(egg);
+  const eggL = egg.clone(); optGroup('route', 'lit').add(eggL);
+  const eggT = egg.clone(); eggT.position.set(C[0] + 1.75, GL + 1.35, C[1] + 0.9); optGroup('route', 'through').add(eggT); // clear of the cross path, on the lawn side
+  window.__eggs = [egg, eggL, eggT];
+  ['rob', 'lit'].forEach(v => box(20.7, 55.35, GL, 0.45, 0.45, 0.45, MAT.timberLight, optGroup('route', v))); box(22.35, 58.35, GL, 0.45, 0.45, 0.45, MAT.timberLight, optGroup('route', 'through'));
 })();
 // steppers: down the west bed, then east towards the ring. Their corner turns square or on a curve with the Path corners option (Will's note)
 const stepperRects = [];
@@ -1057,7 +1121,9 @@ function birdbath(x, y, group) { const pts = [[0, 0], [0.2, 0], [0.2, 0.06], [0.
         cs.add(px, py, pz, Math.cos(a) * 0.6, 0.8, Math.sin(a) * 0.6, FR(0.45, 0.65), tint([0x2c4a28, 0x345530, 0x3a5c33][Math.floor(frnd() * 3)], FR(0.9, 1.35)), 0.5); } } }
   for (let q = 0; q < 26; q++) { const u = FR(-0.3, 1), a = frnd() * 6.28, sq = Math.sqrt(1 - u * u); cs.add(Math.cos(a) * sq * 0.4, h - 0.35 + u * 0.4, Math.sin(a) * sq * 0.4, Math.cos(a) * sq, u, Math.sin(a) * sq, 0.45, tint(0x345530, FR(1, 1.3)), 0.5); }
   g.add(cardMesh(cs.geo(), CARD.narrow));
-  P_.add(g); })(15.79, 52.86);
+  optGroup('bunya', 'rob').add(g); })(15.79, 52.86);
+// Bunya replaced (design option): a smaller evergreen feature tree in the same spot, clear of falling cones. Rob to pick the species.
+withRng(6060, () => tree({ x: 15.79, y: 52.86, h: 5.0, r: 1.9, color: 0x3d6331, group: optGroup('bunya', 'replaced'), grow: true, s0: 0.42 }));
 let fish = [], bubbles = [];
 (function pond() { const x0 = 20.2, y0 = 45.7, x1 = 22.1, y1 = 48.0; slab(rect(x0, y0, x1, y1), GL, GL + 0.48, MAT.render, P_, { holes: [rect(x0 + 0.22, y0 + 0.22, x1 - 0.22, y1 - 0.22)], cast: true });
   slab(rect(x0 - 0.04, y0 - 0.04, x1 + 0.04, y1 + 0.04), GL + 0.48, GL + 0.53, MAT.stone, P_, { holes: [rect(x0 + 0.2, y0 + 0.2, x1 - 0.2, y1 - 0.2)] });
@@ -1084,9 +1150,13 @@ ground([[32.3, 61.2], [35.3, 61.1], [35.4, 63.1], [32.3, 63.25]], GL, MAT.agg, P
 const kitB = newKit(); for (let x = 22.7; x < 27.9; x += 0.7) plantKit(x > 23.0 && x < 26.8 ? 'arthropodium' : 'oakleaf', x + R(-0.08, 0.08), x > 23.0 && x < 26.8 ? 46.95 : 46.5, GL, kitB, 0.9);
 flushKit(kitB, P_, true);
 const featureTrees = [[12.86, 59.24, 4.6, 1.75], [16.84, 60.68, 5.2, 1.6], [25.7, 49.75, 6.0, 1.6], [30.27, 56.2, 5.4, 1.6], [30.77, 60.6, 4.2, 1.6], [28.5, 61.6, 5.0, 1.6]];
-featureTrees.forEach(([x, y, h, r]) => tree({ x, y, h, r, color: 0x6c8f4a, group: P_, grow: true, s0: 0.42 }));
+featureTrees.forEach(([x, y, h, r], i) => tree({ x, y, h, r, color: 0x6c8f4a, group: i < 3 ? P_ : LR, grow: true, s0: 0.42 })); // last three sit where the lawn option changes
+// lawn to the driveway: one stands in the lawn, one stays near the street edge, one moves to the corner by the bins
+const lawnTrees = { rob: featureTrees.slice(3), drive: [[30.27, 56.2, 5.4, 1.6], [31.25, 62.0, 4.2, 1.6], [28.5, 61.6, 5.0, 1.6]] };
 const shadeTrees = [[28.44, 52.3, 8.5, 3.0], [31.96, 52.3, 7.5, 2.4], [34.07, 60.4, 8.5, 3.0], [39.95, 60.1, 8.5, 3.0]];
 shadeTrees.forEach(([x, y, h, r]) => tree({ x, y, h, r, color: 0x527a38, group: P_, grow: true, s0: 0.36 }));
+withRng(6161, () => lawnTrees.drive.forEach(([x, y, h, r]) => tree({ x, y, h, r, color: 0x6c8f4a, group: LD, grow: true, s0: 0.42 })));
+[[30.27, 56.2, 0.5], [31.25, 62.0, 0.45], [28.5, 61.6, 0.5], [28.44, 52.3, 0.5], [31.96, 52.3, 0.5]].forEach(([x, y, r]) => ground(circle(x, y, r, 20), GL, MAT.mulch, LD, { layer: 3 })); // mulched circles under trees in the lawn
 hedge([[southX(45.4) - 0.5, 45.4], [southX(53.0) - 0.5, 53.0]], 3.0, 0.85, P_, { color: 0x3d6a33, grow: true }); // lilly pilly hedge above fence height along the south fence (Will's note)
 tree({ x: 16.07, y: 60.95, h: 2.0, r: 0.75, color: 0x3f6a30, group: P_, grow: true, s0: 0.65, fruit: true });
 const gateLink = [[19.24, 59.7], [20.45, 59.7], [20.45, 63.85], [18.2, 63.85], [18.2, 62.15], [19.24, 62.15]];
@@ -1104,15 +1174,51 @@ function freeProp(x, y) {
   if (Math.abs(dist(x, y, [16.6, 61.95]) - 2.0) < 0.3 && y < 62.0) return false;
   return true;
 }
-const kitP = newKit();
+const kitP = newKit(), kitDry = newKit(); // kitDry: Rob's original pass, run only so the shared random sequence (and Today) stays exactly as before
 for (let y = 49.6; y < 66; y += 0.9) for (let x = 9.5; x < 35; x += 0.9) {
   const px = x + R(-0.3, 0.3), py = y + R(-0.3, 0.3); if (!freeProp(px, py)) continue;
-  plantKit(rnd() < 0.45 ? 'oakleaf' : 'arthropodium', px, py, GL, kitP, rnd() < 0.45 ? 0.95 : 1.0); // beds: arthropodium and oak-leaf hydrangeas (Will's notes)
+  plantKit(rnd() < 0.45 ? 'oakleaf' : 'arthropodium', px, py, GL, kitDry, rnd() < 0.45 ? 0.95 : 1.0);
 }
 for (let y = 38.9; y < 49.3; y += 0.75) for (let x = northX(y) + 1.15; x < SPX - 0.45; x += 0.6) plantKit(rnd() < 0.5 ? 'oakleaf' : 'arthropodium', x + R(-0.1, 0.1), y + R(-0.15, 0.15), GL, kitP, 0.85);
-for (let x = 19.6; x < 32; x += 0.55) plantKit('grass', x + R(-0.08, 0.08), frontY(x) - 1.3 + R(-0.08, 0.08), GL, kitP);
-for (let y = 51.6; y < 58.2; y += 0.55) plantKit('grass', 31.2, y, GL, kitP);
+for (let x = 19.6; x < 32; x += 0.55) plantKit('grass', x + R(-0.08, 0.08), frontY(x) - 1.3 + R(-0.08, 0.08), GL, kitDry);
+for (let y = 51.6; y < 58.2; y += 0.55) plantKit('grass', 31.2, y, GL, kitDry);
 flushKit(kitP, P_, true);
+// Beds: arthropodium and oak-leaf hydrangeas (Will's notes). Which ground is bed depends on the design options, so each option gets its own planting.
+// West of x 23 only the gate route changes the beds; east of it only the lawn and visitor bay do.
+function freeCommon(x, y) {
+  if (y > frontY(x) - 1.15 || x < northX(y) + 0.45 || x > 34.9) return false;
+  if (y > 44.5 && y < 60.5 && x > laneX(y) - 0.35) return false; // keep plants off the driveway lane
+  for (const r of [[26.3, 48.1, 33.2, 51.7], [14.8, 62.0, 19.7, 70], [32.0, 60.8, 35.6, 64], [17.3, 45.3, 22.3, 48.3], [11.55, 51.7, 12.45, 54.0], [25.6, 49.1, 26.6, 50.1]]) if (inRect(x, y, r)) return false;
+  if (y < 49.45 && y > 45.4) return false;
+  if (inPoly(x, y, rampPoly)) return false;
+  for (const z of stepZones) if (inRect(x, y, z)) return false;
+  for (const t of featureTrees.slice(0, 3).concat(shadeTrees)) if (dist(x, y, t) < 0.6) return false;
+  if (dist(x, y, [15.79, 52.86]) < 1.9 || dist(x, y, [16.07, 60.95]) < 0.7) return false;
+  if (Math.abs(dist(x, y, [16.6, 61.95]) - 2.0) < 0.3 && y < 62.0) return false;
+  return true;
+}
+const routeFree = {
+  rob: (x, y) => !(dist(x, y, C) < 4.75 || inPoly(x, y, gateLink) || [[17.9, 48.1, 19.4, 53.8], [17.4, 49.1, 20.1, 50.2], [18.3, 61.2, 19.3, 62.2]].some(r => inRect(x, y, r)) || inPoly(x, y, lawnPoly)),
+  through: (x, y) => !(dist(x, y, C) < 3.85 || [[XP0 - BR - 0.15, 48.1, XP1 + BR + 0.15, 63.6], [18.2, 62.0, XP1 + BR + 0.15, 63.6], [XP0 - 1.05, 49.1, XP1 + 1.05, 50.2]].some(r => inRect(x, y, r)) || (x > XP0 - BR && inPoly(x, y, lawnPoly))),
+};
+routeFree.lit = (x, y) => routeFree.rob(x, y) && !litSpots.some(q => dist(x, y, q) < 0.4);
+withRng(9001, () => {
+  const K = { rob: newKit(), through: newKit(), lit: newKit(), robBay: newKit(), robNoBay: newKit(), drive: newKit() };
+  const clear = (x, y, ts) => !ts.some(t => dist(x, y, t) < 0.6);
+  for (let y = 49.6; y < 66; y += 0.9) for (let x = 9.5; x < 35; x += 0.9) {
+    const px = x + R(-0.3, 0.3), py = y + R(-0.3, 0.3), kind = rnd() < 0.45 ? 'oakleaf' : 'arthropodium', sc = rnd() < 0.45 ? 0.95 : 1.0;
+    if (!freeCommon(px, py)) continue;
+    if (px < 23) { ['rob', 'through', 'lit'].forEach(v => { if (routeFree[v](px, py)) plantKit(kind, px, py, GL, K[v], sc); }); continue; }
+    if (!inPoly(px, py, lawnPoly) && clear(px, py, lawnTrees.rob)) { if (!inPoly(px, py, visitorBay)) plantKit(kind, px, py, GL, K.robBay, sc); plantKit(kind, px, py, GL, K.robNoBay, sc); }
+    if (!inPoly(px, py, lawnDrive) && clear(px, py, lawnTrees.drive)) plantKit(kind, px, py, GL, K.drive, sc);
+  }
+  for (let x = 23.6; x < 32; x += 0.55) { const px = x + R(-0.08, 0.08), py = frontY(x) - 1.3 + R(-0.08, 0.08); if (!inPoly(px, py, lawnPoly)) { plantKit('grass', px, py, GL, K.robBay); plantKit('grass', px, py, GL, K.robNoBay); } } // grasses along the front hedge
+  for (let y = 51.6; y < 58.2; y += 0.55) plantKit('grass', 31.2, y, GL, K.robBay); // grasses beside the visitor bay
+  ['rob', 'through', 'lit'].forEach(v => flushKit(K[v], optGroup('route', v), true));
+  ['rob', 'pavers'].forEach(v => flushKit(K.robBay, optGroup('bay', v, LR), true));
+  flushKit(K.robNoBay, optGroup('bay', 'removed', LR), true);
+  flushKit(K.drive, LD, true);
+});
 [[11.4, 49.6], [15.0, 49.6], [22.0, 49.6], [17.9, 51.5], [17.0, 59.3], [20.0, 61.0], ...[0, 60, 120, 180, 240, 300].map(a => [C[0] + 4.6 * Math.cos(a * deg + 0.26), C[1] + 4.6 * Math.sin(a * deg + 0.26)])].forEach(([x, y]) => gardenLight(x, y, 'prop'));
 
 /* ============ TODAY front garden (SD-06 mapped onto the plan, checked against the photos and video) ============ */
@@ -1367,6 +1473,8 @@ $('#keyCollapse').onclick = () => { if (innerWidth <= 760) { $('#key').classList
 /* ============ design options UI ============ */
 function applyOpts() {
   Object.entries(optGroups).forEach(([k, vs]) => Object.entries(vs).forEach(([v, gs]) => gs.forEach(g => { g.visible = OPT[k].val === v; })));
+  // Through the pergola: the pergola turns 15 degrees about its centre so the cross path runs between two posts, not into one
+  { const t = OPT.route.val === 'through' ? 15 * deg : 0, c = Math.cos(t), sn = Math.sin(t); Object.values(optGroups.pergola).flat().forEach(g => { g.rotation.y = t; g.position.set(C[0] - (C[0] * c + C[1] * sn), 0, C[1] - (-C[0] * sn + C[1] * c)); }); }
   document.querySelectorAll('#opts button').forEach(b => b.setAttribute('aria-pressed', OPT[b.dataset.k].val === b.dataset.v));
   try { const q = Object.entries(OPT).filter(([, o]) => o.val !== o.def).map(([k, o]) => k + '=' + o.val).join('&'); history.replaceState(null, '', q ? '#' + q : location.pathname + location.search); } catch (e) {}
 }
@@ -1487,7 +1595,7 @@ function frame() {
   if (!reduceMotion) {
     fish.forEach(f => { const a = elapsed * f.sp + f.ph; const x = 21.15 + Math.cos(a) * 0.45, y = 46.85 + Math.sin(a * 0.8) * 0.7; const nx = 21.15 + Math.cos(a + 0.05) * 0.45, ny = 46.85 + Math.sin((a + 0.05) * 0.8) * 0.7; f.m.position.set(x, GL + 0.33, y); f.m.lookAt(nx, GL + 0.33, ny); });
     bubbles.forEach((b, i) => { const s = 1 + 0.25 * Math.sin(elapsed * 6 + i * 2); b.scale.set(s, 0.8 + 0.35 * Math.sin(elapsed * 7 + i), s); });
-    if (window.__egg) window.__egg.rotation.z = Math.sin(elapsed * 0.7) * 0.03;
+    (window.__eggs || []).forEach(e => { e.rotation.z = Math.sin(elapsed * 0.7) * 0.03; });
   }
   sky.position.copy(camera.position);
   camera.getWorldDirection(fw); let fx = fw.x, fz = fw.z; if (Math.hypot(fx, fz) < 0.05) { upv.set(0, 1, 0).applyQuaternion(camera.quaternion); fx = upv.x; fz = upv.z; }
