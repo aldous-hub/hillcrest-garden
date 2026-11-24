@@ -831,7 +831,11 @@ hedge([[southX(30) - 0.6, 30], [southX(44) - 0.6, 44]], 2.6, 0.8, H, { color: 0x
   { const w = (g2[1] - g2[0]) / 2 - 0.12; [g2[0] + 0.1 + w / 2, g2[1] - 0.1 - w / 2].forEach(t => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 1.75), MAT.ironGate); const p = P(t, 0.95); m.position.copy(p); m.rotation.y = -rot; m.castShadow = true; H.add(m); }); }
 })();
 const frontHedgePts = (x0, x1) => [[x0, frontY(x0) - 0.47], [x1, frontY(x1) - 0.47]];
-[[northX(65) + 0.5, 15.58], [17.37, 35.98], [39.12, 41.05]].forEach(([x0, x1]) => hedge(frontHedgePts(x0, x1), GL + 2.35, 0.92, H, { color: 0x3c5b2d, base: 0 }));
+[[northX(65) + 0.5, 15.58], [39.12, 41.05]].forEach(([x0, x1]) => hedge(frontHedgePts(x0, x1), GL + 2.35, 0.92, H, { color: 0x3c5b2d, base: 0 }));
+// between the two gates: whole today; in Proposed a section beside the pedestrian gate's right-hand pier is cut out for the letterbox
+// (hedge() runs each end on by a quarter of its width, so the start is set that much past the cut)
+hedge(frontHedgePts(17.37, 35.98), GL + 2.35, 0.92, G.today, { color: 0x3c5b2d, base: 0 });
+hedge(frontHedgePts(17.86 + 0.23, 35.98), GL + 2.35, 0.92, G.prop, { color: 0x3c5b2d, base: 0 });
 
 /* ============ neighbours (context) ============ */
 // north: single-storey, terracotta tiles, set well back from the fence (IMG_0683)
@@ -949,7 +953,22 @@ slab(rect(17.43, 45.5, 20.05, 48.15), GL, GL + 0.2, MAT.crazy, P_);
 // pedestrian entry: sunken landing, three steps up, low rendered retaining walls
 ground([[15.06, 62.3], [17.26, 62.3], [17.26, frontY(17.26)], [15.06, frontY(15.06)]], 0.01, MAT.crazy, P_, { layer: 1 });
 [['brick', MAT.brick], ['blue', MAT.blue]].forEach(([v, m]) => { const g = optGroup('steps', v); [[17.26, 17.57, 0.15], [17.57, 17.88, 0.30], [17.88, 18.2, 0.45]].forEach(([a, b, h]) => slab(rect(a, 62.3, b, 63.9), 0, h, m, g)); });
-slab([[17.26, 63.9], [18.2, 63.9], [18.2, frontY(18.2)], [17.26, frontY(17.26)]], 0, GL, MAT.mulch, P_);
+// parcel letterbox (380 W x 365 D x 1000 H, charcoal) built into the boundary beside the gate's right-hand pier, facing the street.
+// Set at footpath level with its front flush with the boundary, so the postie and parcels reach it from the footpath (Will)
+const LB = (() => { const a = [10.7, 65.5], b = [41.4, 63.2], L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = -uy, ny = ux; // n points to the street
+  const t0 = (17.2 - a[0]) / ux + 0.21 + 0.02, tc = t0 + 0.19, c = [a[0] + ux * tc, a[1] + uy * tc];
+  const at = (s, d) => [c[0] + ux * s + nx * d, c[1] + uy * s + ny * d]; return { c, ux, uy, at, rot: Math.atan2(uy, ux) }; })();
+(function letterbox() { const g = new THREE.Group(); g.position.set(LB.c[0], 0, LB.c[1]); g.rotation.y = -LB.rot; // local x along the boundary, +z to the street
+  const body = mat(0x2a2b2d, { roughness: 0.5, metalness: 0.25 }), dark = mat(0x0e0e0f, { roughness: 0.8 }), lid = mat(0x232426, { roughness: 0.45, metalness: 0.3 });
+  const add = (w, h, d, x, y, z, m, cast = true) => { const me = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); me.position.set(x, y, z); me.castShadow = cast; me.receiveShadow = true; g.add(me); };
+  add(0.38, 0.975, 0.365, 0, 0.4875, -0.1825 + 0.01, body); add(0.40, 0.025, 0.385, 0, 0.9875, -0.1825 + 0.01, lid); // cabinet and top
+  add(0.32, 0.075, 0.02, 0, 0.895, 0.02, lid, false); add(0.32, 0.05, 0.02, 0, 0.83, 0.012, dark, false); // letters flap over the 70 mm slot
+  add(0.33, 0.78, 0.012, 0, 0.405, 0.022, body, false); // parcel door
+  for (let k = 1; k < 10; k++) add(0.32, 0.005, 0.004, 0, 0.405 - 0.39 + k * 0.078, 0.03, dark, false); // horizontal grooves
+  const lock = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.01, 12), mat(0xbfc2c4, { metalness: 0.8, roughness: 0.3 })); lock.rotation.x = Math.PI / 2; lock.position.set(0.02, 0.76, 0.032); g.add(lock);
+  P_.add(g); })();
+// raised bed behind the hedge line, notched round the letterbox
+slab([[17.26, 63.9], [18.2, 63.9], [18.2, frontY(18.2)], LB.at(0.23, 0), LB.at(0.23, -0.4), LB.at(-0.23, -0.4), LB.at(-0.23, 0), [17.26, frontY(17.26)]], 0, GL, MAT.mulch, P_);
 wallLine([[15.06, 62.2], [17.3, 62.2]], 0, GL + 0.08, 0.2, MAT.render, P_);
 wallLine([[14.96, 62.2], [14.96, frontY(14.96) - 0.35]], 0, GL + 0.08, 0.2, MAT.render, P_);
 (function screen() { const S = [16.6, 61.95], r = 2.0, a0 = 180 * deg, a1 = 315 * deg; const n = Math.round(r * (a1 - a0) / 0.085);
