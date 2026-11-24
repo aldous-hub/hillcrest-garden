@@ -438,8 +438,8 @@ function hipRoof(x0, y0, x1, y1, eave, group, { o = 0.45, pitch = 30 * deg, m = 
   return mesh;
 }
 // A building block: walls (render or weatherboard), cornice band, gutter/fascia, hip roof.
-function block(x0, y0, x1, y1, eave, group, { wm = MAT.render, base = GL, o = 0.45, pitch = 30 * deg, cornice = true, rm = MAT.slate, plinth = true } = {}) {
-  box((x0 + x1) / 2, (y0 + y1) / 2, base, x1 - x0, y1 - y0, eave - base, wm, group);
+function block(x0, y0, x1, y1, eave, group, { wm = MAT.render, base = GL, o = 0.45, pitch = 30 * deg, cornice = true, rm = MAT.slate, plinth = true, solid = true } = {}) {
+  if (solid) box((x0 + x1) / 2, (y0 + y1) / 2, base, x1 - x0, y1 - y0, eave - base, wm, group);
   if (plinth) box((x0 + x1) / 2, (y0 + y1) / 2, base, x1 - x0 + 0.06, y1 - y0 + 0.06, 0.35, MAT.stoneDark, group, { cast: false });
   if (cornice) box((x0 + x1) / 2, (y0 + y1) / 2, eave - 0.32, x1 - x0 + 0.14, y1 - y0 + 0.14, 0.24, MAT.cornice, group, { cast: false });
   box((x0 + x1) / 2, (y0 + y1) / 2, eave - 0.1, x1 - x0 + 2 * o, y1 - y0 + 2 * o, 0.16, MAT.trim, group, { cast: false }); // taupe gutter and fascia (IMG_0693, IMG_0694)
@@ -702,7 +702,20 @@ block(14.82, 35.95, 20.21, 43.06, EAVE1, H);                                    
 block(20.21, 32.8, 27.7, 38.15, EAVE1, H, { wm: MAT.wb, cornice: false });         // sitting room
 block(22.3, 38.15, 27.7, 45.4, EAVE1, H);                                           // study / library
 block(23.1, 45.4, 26.7, 46.4, EAVE1 - 0.35, H, { o: 0.3, pitch: 28 * deg });        // study bay (three windows)
-block(20.21, 42.7, 22.3, 45.4, EAVE1 - 0.25, H, { o: 0.25 });                       // entry
+block(20.21, 38.15, 22.3, 43.06, EAVE1, H, { o: 0.05, cornice: false, plinth: false }); // hallway from the front door back to the sitting room (SD-06). Closes the gap that read as an atrium (Will's note)
+// entry porch: open, not a room. A window-like opening in its street face looks through to the front door,
+// and a doorway in its north side opens off the verandah (IMG_0693, IMG_0695; 2017 ground floor plan)
+block(20.21, 43.06, 22.3, 45.4, EAVE1 - 0.25, H, { o: 0.25, plinth: false, solid: false });
+{ const top = EAVE1 - 0.25, sx0 = 20.75, sx1 = 21.75, sill = FLOOR + 0.55, head = FLOOR + 1.75, ny0 = 43.7, ny1 = 44.6;
+  box((20.21 + sx0) / 2, 45.275, GL, sx0 - 20.21, 0.25, top - GL, MAT.render, H); box((sx1 + 22.3) / 2, 45.275, GL, 22.3 - sx1, 0.25, top - GL, MAT.render, H);
+  box((sx0 + sx1) / 2, 45.275, GL, sx1 - sx0, 0.25, sill - GL, MAT.render, H); box((sx0 + sx1) / 2, 45.275, head, sx1 - sx0, 0.25, top - head, MAT.render, H);
+  box((sx0 + sx1) / 2, 45.36, sill - 0.06, sx1 - sx0 + 0.2, 0.14, 0.06, MAT.cornice, H, { cast: false }); // sill
+  box(20.335, (43.06 + ny0) / 2, GL, 0.25, ny0 - 43.06, top - GL, MAT.render, H); box(20.335, (ny1 + 45.15) / 2, GL, 0.25, 45.15 - ny1, top - GL, MAT.render, H);
+  box(20.335, (ny0 + ny1) / 2, FLOOR + 2.35, 0.25, ny1 - ny0, top - FLOOR - 2.35, MAT.render, H);
+  box(22.2, 44.1, GL, 0.2, 2.1, top - GL, MAT.render, H); // south side against the study
+  slab(rect(20.21, 43.06, 22.3, 45.15), GL, FLOOR, MAT.paleTile, H);
+  box(21.255, 44.1, top - 0.1, 2.09, 2.34, 0.1, MAT.cornice, H, { cast: false }); // porch ceiling
+  opening(H, 21.25, 43.08, FLOOR, 1.0, 2.3, 0, { kind: 'door' }); } // front door, at the back of the porch
 block(27.7, 30.1, 32.94, 45.4, EAVE2, H);                                           // two-storey bedroom wing
 block(32.94, 31.1, 36.4, 37.6, EAVE1, H, { wm: MAT.wb, cornice: false });          // WIR / ensuite
 block(32.94, 37.6, 39.4, 44.6, EAVE1, H);                                           // garage
@@ -721,7 +734,7 @@ chimney(30.3, 43.6, EAVE2, 2.2, H); chimney(30.3, 31.6, EAVE2, 2.2, H); chimney(
 [23.75, 24.9, 26.05].forEach(x => opening(H, x, 46.42, FLOOR + 0.45, 0.62, 1.95, 0, { shutter: true }));
 opening(H, 30.3, 45.42, FLOOR + 3.3, 0.95, 1.8, 0); // the wing's street face has one upper sash, centred (2017 west elevation, IMG_0694)
 [42.6, 38.2, 33.8].forEach(z => opening(H, 27.68, z, FLOOR + 3.4, 0.8, 1.4, -Math.PI / 2, { shutter: true }));
-opening(H, 19.2, 43.08, FLOOR, 1.05, 2.3, 0, { kind: 'door' }); [16.1, 17.7].forEach(x => opening(H, x, 43.08, FLOOR, 1.05, 2.3, 0, { kind: 'french' }));
+opening(H, 18.1, 43.08, FLOOR, 1.0, 2.3, 0, { kind: 'french' }); // the verandah's one pair of glazed doors (2017 plan; IMG_0695, Will's note)
 [38.2, 41.0].forEach(z => opening(H, 14.8, z, FLOOR, 1.1, 2.3, -Math.PI / 2, { kind: 'french' }));
 opening(H, 11.6, 35.97, FLOOR + 0.55, 0.8, 1.7, 0); opening(H, 13.6, 35.97, FLOOR, 1.1, 2.3, 0, { kind: 'french' });
 [27.4, 30.3, 33.1].forEach(z => opening(H, 10.78, z, FLOOR + 0.55, 0.95, 1.75, -Math.PI / 2));
@@ -1004,13 +1017,19 @@ let fish = [], bubbles = [];
   [[20.6, 46.2], [21.7, 47.6], [20.55, 47.5], [21.75, 46.1]].forEach(([x, y]) => { const l = new THREE.Mesh(new THREE.CircleGeometry(0.16, 12, 0.4, 5.6), mat(0x4c7a37)); l.rotation.x = -Math.PI / 2; l.position.set(x, GL + 0.405, y); P_.add(l); });
   const lily = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), mat(0xf6d7e4)); lily.position.set(20.62, GL + 0.43, 46.2); P_.add(lily);
 })();
-wallLine([[35.1, 61.0], [33.5, 61.05], [32.7, 61.15], [32.35, 61.5], [32.2, 62.1], [32.2, 62.7]], GL, 1.3, 0.18, MAT.render, P_);
+// bin area screened by a battened timber fence on its garden and north sides; open to the driveway for access (Will's note)
+(function battenScreen(pts, h) { const parts = []; const add = (cx, cy, cz, w, hh, d, rot) => { const g = new THREE.BoxGeometry(w, hh, d); g.rotateY(rot); g.translate(cx, cz, cy); parts.push(g); };
+  for (let i = 0; i < pts.length - 1; i++) { const [a, b] = [pts[i], pts[i + 1]]; const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, rot = Math.atan2(ux, uy);
+    for (let t = 0.03; t < L; t += 0.068) add(a[0] + ux * t, a[1] + uy * t, GL + 0.02 + h / 2, 0.042, h, 0.042, rot); // vertical battens with ~25 mm gaps
+    [0.25, h - 0.2].forEach(z => add((a[0] + b[0]) / 2 + uy * 0.045, (a[1] + b[1]) / 2 - ux * 0.045, GL + z, 0.035, 0.09, L, rot)); // rails behind
+    for (let t = 0; t <= L + 0.01; t += L / Math.max(1, Math.round(L / 1.8))) add(a[0] + ux * t + uy * 0.06, a[1] + uy * t - ux * 0.06, GL + h / 2, 0.09, h + 0.02, 0.09, rot); } // posts
+  const m = new THREE.Mesh(mergeGeometries(parts), MAT.timberLight); m.castShadow = true; m.receiveShadow = true; P_.add(m); })([[35.35, 61.05], [32.2, 61.05], [32.2, 63.0]], 1.5);
 ground([[32.3, 61.2], [35.3, 61.1], [35.4, 63.1], [32.3, 63.25]], GL, MAT.agg, P_, { layer: 2 });
 [32.75, 33.45, 34.15, 34.85].forEach(x => { box(x, 62.55, GL, 0.58, 0.72, 1.05, MAT.bin, P_); box(x, 62.55, GL + 1.05, 0.6, 0.74, 0.05, MAT.binLid, P_); });
 // new English box hedge continues the existing hedge's straight front line (y 47.7) past the entry and pond,
 // giving one straight front to the bed along the house, up to the sunroom corner
 // ...then on past the sunroom windows and back along its south side toward the garage (Will's note)
-[['60', 0.62, 0.42], ['90', 0.92, 0.5]].forEach(([v, h, w]) => hedge([[22.25, 47.7], [27.95, 47.7], [28.15, 47.98], [32.62, 47.98], [32.62, 45.5]], h, w, optGroup('hedge', v), { color: 0x34532a, grow: true }));
+[['60', 0.62, 0.42], ['90', 0.92, 0.5]].forEach(([v, h, w]) => hedge([[22.25, 47.7], [32.62, 47.7], [32.62, 45.5]], h, w, optGroup('hedge', v), { color: 0x34532a, grow: true }));
 const kitB = newKit(); for (let x = 22.7; x < 27.9; x += 0.7) plantKit(x > 23.0 && x < 26.8 ? 'arthropodium' : 'oakleaf', x + R(-0.08, 0.08), x > 23.0 && x < 26.8 ? 46.95 : 46.5, GL, kitB, 0.9);
 flushKit(kitB, P_, true);
 const featureTrees = [[12.86, 59.24, 4.6, 1.75], [16.84, 60.68, 5.2, 1.6], [25.7, 49.75, 6.0, 1.6], [30.27, 56.2, 5.4, 1.6], [30.77, 60.6, 4.2, 1.6], [28.5, 61.6, 5.0, 1.6]];
