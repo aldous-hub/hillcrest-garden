@@ -76,6 +76,11 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .today .num { background: var(--today); color: #fff; }
 #assume { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 0.8rem; color: var(--muted); line-height: 1.35; }
 #opts { display: grid; gap: 9px; }
+.legend { display: grid; gap: 4px; font-size: 0.78rem; }
+.legend h4 { margin: 4px 0 0; font-size: 0.82rem; }
+.legend p { margin: 0; opacity: 0.8; }
+.legend ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 #opts[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
 .opt { display: grid; gap: 4px; }
 .opt > span { font-size: 0.8rem; font-weight: 600; }
@@ -204,6 +209,15 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
     <ul id="keyList"></ul>
     <h3>Design options</h3>
     <div id="opts" role="group" aria-label="Design options"></div>
+    <div id="litLegend" class="legend" hidden><h4>Lighting plan</h4><p>Claude's concept: Rob's plan shows no lighting. Warm white 12 V LED, black or bronze fittings. Slide Time to dusk to see it lit.</p><ul><li><b>Arrival</b> (dusk to 11 pm): gate pier lights, step lights, path lights along the gate route, lanterns at the gate and the entry.</li><li><b>Feature</b> (timer): uplights on five trees and four verandah posts, a pendant in the pergola's crown.</li><li><b>Driveway</b> (motion sensor): seven in-ground markers, a light by the bins.</li></ul></div>
+    <div id="irrLegend" class="legend" hidden><h4>Irrigation plan</h4><p>Claude's concept, best read in Plan view. The meter position is assumed.</p><ul>
+      <li><i style="background:#2f7de1"></i>Zone 1 Lawn (tinted): pop-up sprinklers, each arc shows which way it sprays</li>
+      <li><i style="background:#f08c2b"></i>Zone 2 West beds: drip line, rings round trees</li>
+      <li><i style="background:#9b59d0"></i>Zone 3 Street and driveway beds: drip line, rings round trees</li>
+      <li><i style="background:#14a89a"></i>Zone 4 Hedges: a drip line each side</li>
+      <li><i style="background:#e04b5a"></i>Zone 5 House beds: north bed and along the house front</li>
+      <li><i style="background:#f4f1ea;outline:1px solid #888"></i>Mainline from the meter to the valve box by the bins, and pipes out to the zones</li>
+      <li><i style="background:#b8b8b8"></i>Control cable to the Wi-Fi controller (rain sensor) on the garage</li></ul></div>
     <p class="optNote">Flick between choices to compare from the same view. On the public page the web address keeps your picks, so you can share a combination.</p>
     <h3>To check with Rob</h3>
     <ul id="assume">
@@ -480,6 +494,7 @@ function glazedWall(group, a, b, base, top, spacing = 0.62) {
 // Detail uses its own random stream so plant positions elsewhere stay put.
 let frndImpl = mulberry32(7771); const frnd = () => frndImpl();
 // Extras that exist only in design options draw from their own streams, so everything else (Today included) keeps its exact look
+const GLOW = []; // additive light-pool materials, faded in at dusk
 function withRng(seed, fn) { const a = rndImpl, b = frndImpl; rndImpl = mulberry32(seed); frndImpl = mulberry32(seed + 1); try { return fn(); } finally { rndImpl = a; frndImpl = b; } }
 MAT.pavers = tmat(withRng(5150, () => { const [c, x] = cnv(256); noiseFill(x, 256, 256, [100, 146, 58], 24, [90, 136, 52]); specks(x, 256, 256, ['#7fa84e', '#557e36', '#6b9443'], 1400, 2); x.fillStyle = 'rgba(178,172,160,0.8)'; for (let i = 0; i < 256; i += 32) { x.fillRect(i, 0, 5, 256); x.fillRect(0, i, 256, 5); } return toTex(c); }), 1.2); // grass pavers: lawn over a faint concrete grid
 const FR = (a, b) => a + (b - a) * frnd();
@@ -873,8 +888,10 @@ const OPT = {
   steps: { label: 'Gate steps', choices: [['brick', 'Reclaimed brick'], ['blue', 'Bluestone']], def: 'brick' },
   lawn: { label: 'Front lawn', choices: [['rob', 'Half-moon (Rob)'], ['drive', 'To the driveway']], def: 'rob' },
   bay: { label: 'Visitor parking bay', choices: [['rob', 'Parking (Rob)'], ['pavers', 'Grass pavers'], ['removed', 'Removed']], def: 'rob' },
-  route: { label: 'Gate to front door', choices: [['rob', 'Round the pergola (Rob)'], ['through', 'Through the pergola'], ['lit', "Rob's, lit"]], def: 'rob' },
+  route: { label: 'Gate to front door', choices: [['rob', 'Round the pergola (Rob)'], ['through', 'Through the pergola']], def: 'rob' },
   bunya: { label: 'Bunya pine', choices: [['rob', 'Bunya (Rob)'], ['replaced', 'Smaller tree']], def: 'rob' },
+  lights: { label: 'Garden lighting', choices: [['placeholder', 'Placeholder (current)'], ['plan', 'Lighting plan']], def: 'placeholder' },
+  irrig: { label: 'Irrigation', choices: [['hidden', 'Hidden'], ['plan', 'Show plan']], def: 'hidden' },
 };
 Object.values(OPT).forEach(o => o.val = o.def);
 const optGroups = {};
@@ -945,7 +962,7 @@ curvedPath(filletLine([[northX(37.8) + 0.3, SGC], [SPC, SGC], [SPC, FPC], [26.5,
     wallLine([...off.slice(0, cut), [12.25, a[1] + (b[1] - a[1]) * f]], GL - 0.05, 0.16, 0.035, corten, CV, false); } // drawn a little thicker than real 5 mm edging so it reads in the model
   hedge([[northX(38.9) + 0.45, 38.9], [northX(49.3) + 0.45, 49.3]], 2.1, 0.7, P_, { color: 0x3d6a33, grow: true }); }
 // Rob's route from the gate: L-shaped gate path, round the west side of the pergola on the ring path, then up the north path
-// to the house path. Built once for 'Round the pergola (Rob)' and again for "Rob's, lit" (design option).
+// to the house path ('Round the pergola (Rob)').
 function robRoute(g) { const sq = optGroup('corners', 'square', g), cv = optGroup('corners', 'curved', g);
   ground([...circle(C[0], C[1], RP, 40, acx(20.2, RP), acx(18.40 + PW, RP, true)), ...circle(C[0], C[1], 3.65, 40, acx(18.40 + PW, 3.65, true), acx(20.2, 3.65))], GL, MAT.agg, g, { layer: 3 });
   ground([...circle(C[0], C[1], RB, 40, acx(19.49, RB), acx(18.40, RB, true)), ...circle(C[0], C[1], RP, 40, acx(18.40, RP, true), acx(19.49, RP))], GL, MAT.brick, g, { layer: 2 });
@@ -963,7 +980,7 @@ function robRoute(g) { const sq = optGroup('corners', 'square', g), cv = optGrou
   [rect(19.24, 61.6, 19.49, 62.40), rect(18.2, 62.15, 19.49, 62.40), rect(18.2, 63.13, 20.45, 63.38)].forEach(r => ground(r, GL, MAT.brick, sq, { layer: 2 }));
   curvedPath(filletLine([[19.845, 61.6], [19.845, 62.765], [18.2, 62.765]], [1.0]), cv);
 }
-robRoute(optGroup('route', 'rob')); robRoute(optGroup('route', 'lit'));
+robRoute(optGroup('route', 'rob'));
 // Through the pergola (design option): the gate path runs on from the steps to the pergola's centre line, crosses the pergola floor
 // and carries straight on to the house path, landing at the pond beside the entry (gate, pergola centre and pond line up).
 // Rob's ring path and north path go; the swing moves to the lawn side of the pergola.
@@ -988,14 +1005,6 @@ const XP0 = C[0] - PW / 2, XP1 = C[0] + PW / 2; // pebble edges of the cross pat
   ground([[19.3, 49.4], [w, 49.4], [w, yr(w)], ...circle(C[0], C[1], 3.65, 12, acx(w, 3.65, true), acx(19.3, 3.65, true)), [19.3, yr(19.3)]], GL, MAT.mulch, g, { layer: 1.5 });
   ground([[20.44, ys(20.44)], [w, ys(w)], [w, 62.15], [20.44, 62.15]], GL, MAT.mulch, g, { layer: 1.5 });
   ground(rect(20.45, 63.38, XP1 + BR, 63.6), GL, MAT.brick, g, { layer: 1.5 }); // closes the lawn strip between the gate path and the street brick
-})();
-// Rob's route, lit (design option): a lantern post at each end and low path lights round the pergola, glowing from dusk
-const litSpots = [[18.35, 61.95], [17.85, 49.7], [18.38, 60.54], [16.31, 56.1], [17.18, 53.72]];
-(function litRoute() { const g = optGroup('route', 'lit');
-  const lantern = (x, y) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.07, 2.1, 10), MAT.iron); c.position.set(x, GL + 1.05, y); c.castShadow = true; g.add(c);
-    box(x, y, GL + 2.1, 0.22, 0.22, 0.3, MAT.lamp, g); const r = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.18, 4), MAT.iron); r.position.set(x, GL + 2.49, y); r.rotation.y = Math.PI / 4; g.add(r); };
-  const bollard = (x, y) => { box(x, y, GL, 0.09, 0.09, 0.55, MAT.iron, g, { cast: false }); box(x, y, GL + 0.55, 0.13, 0.13, 0.08, MAT.lamp, g, { cast: false }); box(x, y, GL + 0.63, 0.16, 0.16, 0.03, MAT.iron, g, { cast: false }); };
-  litSpots.forEach(([x, y], i) => (i < 2 ? lantern : bollard)(x, y));
 })();
 // parking per Rob's plan. Left bay: brick kerb, square to the house side, angled end falling toward the gate
 const visitorBay = [[31.5, 53.59], [32.62, 52.98], [33.43, 52.98], [35.16, 59.94], [31.5, 57.87]];
@@ -1080,10 +1089,9 @@ function lacePanel(a, b, yc, h, group) { const L = Math.hypot(b[0] - a[0], b[1] 
   const cush = new THREE.Mesh(new THREE.SphereGeometry(0.4, 18, 12), mat(0xe9e3d6)); cush.scale.set(1, 0.45, 1); cush.position.y = -0.35; egg.add(cush);
   const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.25, 5), MAT.iron); chain.position.y = 1.4; egg.add(chain);
   egg.rotation.y = Math.atan2(57.3 - 60, 21.75 - 26); optGroup('route', 'rob').add(egg);
-  const eggL = egg.clone(); optGroup('route', 'lit').add(eggL);
   const eggT = egg.clone(); eggT.position.set(C[0] + 1.75, GL + 1.35, C[1] + 0.9); optGroup('route', 'through').add(eggT); // clear of the cross path, on the lawn side
-  window.__eggs = [egg, eggL, eggT];
-  ['rob', 'lit'].forEach(v => box(20.7, 55.35, GL, 0.45, 0.45, 0.45, MAT.timberLight, optGroup('route', v))); box(22.35, 58.35, GL, 0.45, 0.45, 0.45, MAT.timberLight, optGroup('route', 'through'));
+  window.__eggs = [egg, eggT];
+  box(20.7, 55.35, GL, 0.45, 0.45, 0.45, MAT.timberLight, optGroup('route', 'rob')); box(22.35, 58.35, GL, 0.45, 0.45, 0.45, MAT.timberLight, optGroup('route', 'through'));
 })();
 // steppers: down the west bed, then east towards the ring. Their corner turns square or on a curve with the Path corners option (Will's note)
 const stepperRects = [];
@@ -1176,6 +1184,12 @@ for (let y = 38.9; y < 49.3; y += 0.75) for (let x = northX(y) + 1.15; x < SPX -
 for (let x = 19.6; x < 32; x += 0.55) plantKit('grass', x + R(-0.08, 0.08), frontY(x) - 1.3 + R(-0.08, 0.08), GL, kitDry);
 for (let y = 51.6; y < 58.2; y += 0.55) plantKit('grass', 31.2, y, GL, kitDry);
 flushKit(kitP, P_, true);
+// Lighting plan fitting spots (see the lighting plan below), kept clear of planting
+const LIT = {
+  common: [[18.35, 61.95], [17.85, 49.7], [12.86, 60.04], [16.84, 61.48], [15.79, 53.66], [25.7, 50.55], [30.27, 57.0]],
+  rob: [[18.33, 60.61], [16.38, 57.82], [16.68, 54.43], [17.84, 52.81], [17.75, 50.9]],
+  through: [[20.15, 61.2], [20.2, 51.3]],
+};
 // Beds: arthropodium and oak-leaf hydrangeas (Will's notes). Which ground is bed depends on the design options, so each option gets its own planting.
 // West of x 23 only the gate route changes the beds; east of it only the lawn and visitor bay do.
 function freeCommon(x, y) {
@@ -1188,26 +1202,27 @@ function freeCommon(x, y) {
   for (const t of featureTrees.slice(0, 3).concat(shadeTrees)) if (dist(x, y, t) < 0.6) return false;
   if (dist(x, y, [15.79, 52.86]) < 1.9 || dist(x, y, [16.07, 60.95]) < 0.7) return false;
   if (Math.abs(dist(x, y, [16.6, 61.95]) - 2.0) < 0.3 && y < 62.0) return false;
+  if (LIT.common.some(q => dist(x, y, q) < 0.35)) return false; // light fittings
+  if (dist(x, y, C) < 3.85) return false; // pergola floor and its brick ring
   return true;
 }
 const routeFree = {
-  rob: (x, y) => !(dist(x, y, C) < 4.75 || inPoly(x, y, gateLink) || [[17.9, 48.1, 19.4, 53.8], [17.4, 49.1, 20.1, 50.2], [18.3, 61.2, 19.3, 62.2]].some(r => inRect(x, y, r)) || inPoly(x, y, lawnPoly)),
-  through: (x, y) => !(dist(x, y, C) < 3.85 || [[XP0 - BR - 0.15, 48.1, XP1 + BR + 0.15, 63.6], [18.2, 62.0, XP1 + BR + 0.15, 63.6], [XP0 - 1.05, 49.1, XP1 + 1.05, 50.2]].some(r => inRect(x, y, r)) || (x > XP0 - BR && inPoly(x, y, lawnPoly))),
+  rob: (x, y) => !(LIT.rob.some(q => dist(x, y, q) < 0.35) || dist(x, y, C) < 4.75 || inPoly(x, y, gateLink) || [[17.9, 48.1, 19.4, 53.8], [17.4, 49.1, 20.1, 50.2], [18.3, 61.2, 19.3, 62.2]].some(r => inRect(x, y, r)) || inPoly(x, y, lawnPoly)),
+  through: (x, y) => !(LIT.through.some(q => dist(x, y, q) < 0.35) || dist(x, y, C) < 3.85 || [[XP0 - BR - 0.15, 48.1, XP1 + BR + 0.15, 63.6], [18.2, 62.0, XP1 + BR + 0.15, 63.6], [XP0 - 1.05, 49.1, XP1 + 1.05, 50.2]].some(r => inRect(x, y, r)) || (x > XP0 - BR && inPoly(x, y, lawnPoly))),
 };
-routeFree.lit = (x, y) => routeFree.rob(x, y) && !litSpots.some(q => dist(x, y, q) < 0.4);
 withRng(9001, () => {
-  const K = { rob: newKit(), through: newKit(), lit: newKit(), robBay: newKit(), robNoBay: newKit(), drive: newKit() };
+  const K = { rob: newKit(), through: newKit(), robBay: newKit(), robNoBay: newKit(), drive: newKit() };
   const clear = (x, y, ts) => !ts.some(t => dist(x, y, t) < 0.6);
   for (let y = 49.6; y < 66; y += 0.9) for (let x = 9.5; x < 35; x += 0.9) {
     const px = x + R(-0.3, 0.3), py = y + R(-0.3, 0.3), kind = rnd() < 0.45 ? 'oakleaf' : 'arthropodium', sc = rnd() < 0.45 ? 0.95 : 1.0;
     if (!freeCommon(px, py)) continue;
-    if (px < 23) { ['rob', 'through', 'lit'].forEach(v => { if (routeFree[v](px, py)) plantKit(kind, px, py, GL, K[v], sc); }); continue; }
+    if (px < 23) { ['rob', 'through'].forEach(v => { if (routeFree[v](px, py)) plantKit(kind, px, py, GL, K[v], sc); }); continue; }
     if (!inPoly(px, py, lawnPoly) && clear(px, py, lawnTrees.rob)) { if (!inPoly(px, py, visitorBay)) plantKit(kind, px, py, GL, K.robBay, sc); plantKit(kind, px, py, GL, K.robNoBay, sc); }
     if (!inPoly(px, py, lawnDrive) && clear(px, py, lawnTrees.drive)) plantKit(kind, px, py, GL, K.drive, sc);
   }
   for (let x = 23.6; x < 32; x += 0.55) { const px = x + R(-0.08, 0.08), py = frontY(x) - 1.3 + R(-0.08, 0.08); if (!inPoly(px, py, lawnPoly)) { plantKit('grass', px, py, GL, K.robBay); plantKit('grass', px, py, GL, K.robNoBay); } } // grasses along the front hedge
   for (let y = 51.6; y < 58.2; y += 0.55) plantKit('grass', 31.2, y, GL, K.robBay); // grasses beside the visitor bay
-  ['rob', 'through', 'lit'].forEach(v => flushKit(K[v], optGroup('route', v), true));
+  ['rob', 'through'].forEach(v => flushKit(K[v], optGroup('route', v), true));
   ['rob', 'pavers'].forEach(v => flushKit(K.robBay, optGroup('bay', v, LR), true));
   flushKit(K.robNoBay, optGroup('bay', 'removed', LR), true);
   flushKit(K.drive, LD, true);
@@ -1292,8 +1307,93 @@ todayLawn.forEach(([x, y], i) => { if (i % 2 && !nearPaths(x, y, 0.6)) gardenLig
 
 /* lights (instanced per group) */
 const lightGeo = new THREE.CylinderGeometry(0.5, 0.5, 1, 8); lightGeo.translate(0, 0.5, 0);
-instanced(lightGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, metalness: 0.4 }), lightItems.prop, P_, { cast: false });
+instanced(lightGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, metalness: 0.4 }), lightItems.prop, optGroup('lights', 'placeholder'), { cast: false }); // Placeholder (current)
 instanced(lightGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, metalness: 0.4 }), lightItems.today, T_, { cast: false });
+
+/* ---- Lighting plan (design option, Claude's concept: Rob's plan shows none). Warm white 12 V LED, black or bronze fittings.
+   Arrival circuit (dusk to 11 pm): gate pier lights, step lights, path lights, lanterns at the gate and the entry.
+   Feature circuit (timer): tree uplights, verandah post uplights, pendant in the pergola's crown.
+   Driveway circuit (sensor): in-ground markers along the driveway, a light by the bins. Pools of light show from dusk. ---- */
+(function lightingPlan() { const LG = optGroup('lights', 'plan'), warm = new THREE.Color(0xffc77a);
+  const glowMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }); GLOW.push(glowMat);
+  const tint = (geo, f) => { const pos = geo.attributes.position, col = []; for (let i = 0; i < pos.count; i++) { const k = f(pos, i); col.push(warm.r * k, warm.g * k, warm.b * k); } geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); return geo; };
+  const pool = (x, y, r, k, g, base = GL) => { const m = new THREE.Mesh(tint(new THREE.CircleGeometry(r, 28), (p, i) => k * (1 - Math.min(1, Math.hypot(p.getX(i), p.getY(i)) / r)) ** 2), glowMat); m.rotation.x = -Math.PI / 2; m.position.set(x, base + 0.035, y); m.renderOrder = 5; g.add(m); };
+  const upbeam = (x, y, h, rTop, k, g, base = GL) => { const m = new THREE.Mesh(tint(new THREE.CylinderGeometry(rTop, 0.07, h, 18, 4, true), (p, i) => k * (0.5 - p.getY(i) / h) ** 1.6), glowMat); m.position.set(x, base + 0.08 + h / 2, y); m.renderOrder = 5; g.add(m); };
+  const uplight = (x, y, h, rTop, k, g, base = GL) => { box(x, y, base, 0.1, 0.1, 0.07, MAT.iron, g, { cast: false }); box(x, y, base + 0.07, 0.07, 0.07, 0.012, MAT.lamp, g, { cast: false }); upbeam(x, y, h, rTop, k, g, base); pool(x, y, 0.6, 0.35, g, base); };
+  const pathLight = (x, y, g) => { box(x, y, GL, 0.07, 0.07, 0.5, MAT.iron, g, { cast: false }); box(x, y, GL + 0.5, 0.12, 0.12, 0.07, MAT.lamp, g, { cast: false }); box(x, y, GL + 0.57, 0.17, 0.17, 0.025, MAT.iron, g, { cast: false }); pool(x, y, 1.3, 0.55, g); };
+  const lantern = (x, y, g) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.07, 2.1, 10), MAT.iron); c.position.set(x, GL + 1.05, y); c.castShadow = true; g.add(c);
+    box(x, y, GL + 2.1, 0.22, 0.22, 0.3, MAT.lamp, g); const r = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.18, 4), MAT.iron); r.position.set(x, GL + 2.49, y); r.rotation.y = Math.PI / 4; g.add(r); pool(x, y, 2.4, 0.5, g); };
+  const marker = (x, y, g) => { const d = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.02, 12), MAT.lamp); d.position.set(x, GL + 0.01, y); g.add(d); pool(x, y, 0.55, 0.4, g); };
+  // arrival
+  lantern(...LIT.common[0], LG); lantern(...LIT.common[1], LG);
+  LIT.rob.forEach(([x, y]) => pathLight(x, y, optGroup('route', 'rob', LG))); LIT.through.forEach(([x, y]) => pathLight(x, y, optGroup('route', 'through', LG)));
+  { const a = [10.7, 65.5], b = [41.4, 63.2], L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L; // gate pier lights, on the pier caps
+    [15.75, 17.2].forEach(px => { const t = (px - a[0]) / ux, x = a[0] + ux * t, y = a[1] + uy * t; box(x, y, 2.27, 0.18, 0.18, 0.2, MAT.lamp, LG); box(x, y, 2.47, 0.24, 0.24, 0.04, MAT.iron, LG); pool(x, y, 1.6, 0.45, LG, 0); }); }
+  [[17.26, 0.06], [17.57, 0.21], [17.88, 0.36]].forEach(([x, z]) => { box(x - 0.012, 63.1, z, 0.02, 0.2, 0.045, MAT.lamp, LG, { cast: false }); pool(x - 0.35, 63.1, 0.6, 0.35, LG, z - 0.1); }); // step lights in the gate step risers
+  // feature
+  [[12.86, 60.04, 4.6], [16.84, 61.48, 5.2], [15.79, 53.66, 6.0], [25.7, 50.55, 6.0], [30.27, 57.0, 5.4]].forEach(([x, y, h]) => uplight(x, y, h * 0.6, 1.3, 0.22, LG)); // trees and the bunya (or its replacement)
+  [12.5, 15.06, 17.45, 20.1].forEach(x => { const base = x > 17.4 && x < 20.06 ? GL + 0.2 : GL; uplight(x, 45.62, 2.4, 0.3, 0.38, LG, base); }); // verandah posts: the iron lace in silhouette
+  { const g = LG; const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.0, 5), MAT.iron); ch.position.set(C[0], GL + 2.85, C[1]); g.add(ch); // pendant in the pergola's crown
+    const sh = new THREE.Mesh(new THREE.ConeGeometry(0.26, 0.2, 16, 1, true), MAT.iron); sh.position.set(C[0], GL + 2.3, C[1]); g.add(sh); const bl = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), MAT.lamp); bl.position.set(C[0], GL + 2.2, C[1]); g.add(bl); pool(C[0], C[1], 2.6, 0.5, g); }
+  // driveway
+  [[38.8, 46], [38.8, 49], [38.8, 52], [38.8, 55], [38.8, 58], [laneX(52.5) + 0.25, 52.5], [laneX(55.5) + 0.25, 55.5]].forEach(([x, y]) => marker(x, y, LG));
+  pathLight(35.5, 61.25, LG); // by the bins
+})();
+
+/* ---- Irrigation plan (design option, Claude's concept): an overlay drawn on top of everything, best read in Plan view.
+   Zone 1 lawn: pop-up sprinklers with low-flow rotating nozzles (about 4.5 m throw). Zones 2 to 5: drip line under the mulch
+   (drawn at 0.6 m row spacing; real rows are closer), drip rings round trees. Wi-Fi controller with rain sensor in the garage.
+   Water meter position is assumed (front boundary, south of the drive gate). ---- */
+(function irrigationPlan() { const IG = optGroup('irrig', 'plan');
+  const Z = { lawn: 0x2f7de1, west: 0xf08c2b, east: 0x9b59d0, hedge: 0x14a89a, house: 0xe04b5a, main: 0xf4f1ea, cable: 0xb8b8b8 };
+  const mats = {}; const om = (c, o = 0.95) => mats[c + ':' + o] ||= new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthTest: false, depthWrite: false });
+  const line = (pts, w, c, g, o) => { ground(ribbon(pts, w), GL + 0.04, om(c, o), g, { walk: false }).renderOrder = 20; };
+  const disc = (x, y, r, c, g, o) => { ground(circle(x, y, r, 20), GL + 0.04, om(c, o), g, { walk: false }).renderOrder = 21; };
+  const ring = (x, y, r, c, g) => { const pts = circle(x, y, r, 24); line([...pts, pts[0]], 0.06, c, g); };
+  const offLine = (pts, d) => pts.map((p, i) => { const a = pts[Math.max(i - 1, 0)], b = pts[Math.min(i + 1, pts.length - 1)], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy); return [p[0] - dy / L * d, p[1] + dx / L * d]; });
+  const rows = (test, x0, x1, y0, y1, c, g, step = 0.6) => { for (let y = y0 + step / 2; y < y1; y += step) { let run = null;
+    for (let x = x0; x <= x1 + 0.05; x += 0.1) { const ok = x <= x1 && test(x, y); if (ok) { if (run) run[1] = x; else run = [x, x]; } else if (run) { if (run[1] - run[0] >= 0.4) line([[run[0], y], [run[1], y]], 0.06, c, g); run = null; } } } };
+  const clear = (x, y, ts) => !ts.some(t => dist(x, y, t) < 0.6);
+  // Zone 2 west beds, per gate route
+  ['rob', 'through'].forEach(v => rows((x, y) => x < 23 && freeCommon(x, y) && routeFree[v](x, y), 9.5, 23, 49.4, 64.6, Z.west, optGroup('route', v, IG)));
+  [[12.86, 59.24, 0.6], [16.84, 60.68, 0.6], [16.07, 60.95, 0.45], [15.79, 52.86, 1.2]].forEach(([x, y, r]) => ring(x, y, r, Z.west, IG));
+  // Zone 3 street and driveway beds, per lawn and visitor bay
+  const LRg = optGroup('lawn', 'rob', IG), LDg = optGroup('lawn', 'drive', IG);
+  const eastRob = bay => (x, y) => x >= 23 && freeCommon(x, y) && !inPoly(x, y, lawnPoly) && clear(x, y, lawnTrees.rob) && (!bay || !inPoly(x, y, visitorBay));
+  ['rob', 'pavers'].forEach(v => rows(eastRob(true), 23, 35, 49.4, 64.6, Z.east, optGroup('bay', v, LRg)));
+  rows(eastRob(false), 23, 35, 49.4, 64.6, Z.east, optGroup('bay', 'removed', LRg));
+  rows((x, y) => x >= 23 && freeCommon(x, y) && !inPoly(x, y, lawnDrive) && clear(x, y, lawnTrees.drive), 23, 35, 49.4, 64.6, Z.east, LDg);
+  [featureTrees[2], ...shadeTrees].forEach(([x, y]) => ring(x, y, 0.6, Z.east, IG));
+  lawnTrees.rob.forEach(([x, y]) => ring(x, y, 0.6, Z.east, LRg)); lawnTrees.drive.forEach(([x, y]) => ring(x, y, 0.6, Z.east, LDg));
+  // Zone 4 hedges: a drip line each side
+  [[[22.25, 47.7], [32.62, 47.7], [32.62, 45.5]], [[northX(38.9) + 0.45, 38.9], [northX(49.3) + 0.45, 49.3]], [[southX(45.4) - 0.5, 45.4], [southX(53.0) - 0.5, 53.0]],
+   frontHedgePts(northX(65) + 0.5, 15.58), frontHedgePts(18.03, 35.98), frontHedgePts(39.12, 41.05)].forEach(h => [-0.22, 0.22].forEach(d => line(offLine(h, d), 0.06, Z.hedge, IG)));
+  // Zone 5 house beds: the north bed and the bed along the house front
+  rows((x, y) => x > northX(y) + 0.9 && x < SPX - 0.35, 7.5, SPX, 38.9, 49.3, Z.house, IG);
+  line([[22.6, 46.95], [27.9, 46.95]], 0.06, Z.house, IG); line([[22.6, 46.45], [32.3, 46.45]], 0.06, Z.house, IG);
+  // Zone 1 lawn sprinklers, per lawn: heads round the edge about every 4.5 m spraying inward, plus full-circle heads in open lawn
+  const R = 4.5, segD = (x, y, a, b) => distSeg(x, y, a, b);
+  [[lawnPoly, LRg], [lawnDrive, LDg]].forEach(([poly, g]) => {
+    ground(poly, GL + 0.04, om(Z.lawn, 0.24), g, { walk: false }).renderOrder = 18; // the lawn zone, tinted
+    const heads = []; let carry = 0;
+    for (let i = 0; i < poly.length; i++) { const a = poly[i], b = poly[(i + 1) % poly.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      for (let s = carry; s < L; s += R) { const x = a[0] + (b[0] - a[0]) * s / L, y = a[1] + (b[1] - a[1]) * s / L; if (x > 20.6 && dist(x, y, C) > 3.9) heads.push([x, y]); } carry = (carry - L) % R; if (carry < 0) carry += R; }
+    const edgeDist = (x, y) => Math.min(...poly.map((a, i) => segD(x, y, a, poly[(i + 1) % poly.length])));
+    for (let x = 20; x < 36; x += R) for (let y = 49; y < 64; y += R) if (inPoly(x, y, poly) && edgeDist(x, y) > 2.6 && dist(x, y, C) > 4.2) heads.push([x, y]);
+    heads.forEach(([x, y]) => { const n = 36, inc = []; for (let k = 0; k < n; k++) { const t = k / n * Math.PI * 2; inc.push(inPoly(x + Math.cos(t) * 1.2, y + Math.sin(t) * 1.2, poly)); }
+      const A = 0.9; // short arc showing which way each head sprays (part circle at the edges, full circle in open lawn)
+      if (inc.every(Boolean)) ground(circle(x, y, A, 24), GL + 0.04, om(Z.lawn, 0.45), g, { walk: false }).renderOrder = 19;
+      else { let k0 = inc.findIndex((v, k) => v && !inc[(k - 1 + n) % n]); if (k0 >= 0) { let k = k0; const pts = [[x, y]]; while (inc[k % n] && pts.length <= n) { const t = (k % n) / n * Math.PI * 2; pts.push([x + Math.cos(t) * A, y + Math.sin(t) * A]); k++; } ground(pts, GL + 0.04, om(Z.lawn, 0.45), g, { walk: false }).renderOrder = 19; } }
+      disc(x, y, 0.14, Z.lawn, g); });
+  });
+  // supply: assumed meter, mainline to the valve box at the bin area, sub-mains out to the zones, control cable to the garage
+  const meter = [40.2, 62.6], valves = [34.0, 61.65];
+  line([meter, [35.6, 62.95], valves], 0.1, Z.main, IG);
+  [[valves, [30.5, 61.0], [27.5, 58.5]], [valves, [32.0, 63.0], [15.0, frontY(15.0) - 1.0]], [valves, [laneX(58.5) - 0.3, 58.5], [laneX(51.67) - 0.3, 51.67], [32.62, 47.9], [22.4, 47.9], [SPX + 0.2, 47.9], [SPX + 0.2, 40.0]]].forEach(p => line(p, 0.07, Z.main, IG, 0.8));
+  line([valves, [laneX(58.5) + 0.2, 58.5], [laneX(51.67) + 0.2, 51.67], [33.2, 44.75]], 0.04, Z.cable, IG);
+  disc(...meter, 0.2, Z.main, IG); ground(rect(valves[0] - 0.3, valves[1] - 0.2, valves[0] + 0.3, valves[1] + 0.2), GL + 0.04, om(0x2b2b2b), IG, { walk: false }).renderOrder = 22;
+  box(33.2, 44.72, GL + 1.2, 0.3, 0.08, 0.36, mat(0x3a3d40), IG); disc(33.2, 44.95, 0.2, Z.cable, IG); // controller on the garage front wall
+})();
 
 /* ============ lighting & sun ============ */
 const hemi = new THREE.HemisphereLight(0xdfeaf5, 0x5e5946, 1.0); scene.add(hemi);
@@ -1322,6 +1422,7 @@ function setSun(month, hour) {
   skyU.top.value.copy(top); skyU.hor.value.copy(hor); scene.fog.color.copy(hor);
   sun.color.setHSL(0.09, 0.65, lerp(0.72, 0.94, day));
   MAT.lamp.emissiveIntensity = night > 0.2 || el < 3 * deg ? 2.5 : 0.4;
+  GLOW.forEach(m => { m.opacity = night > 0.2 || el < 3 * deg ? 1 : 0; }); // lighting plan pools and beams show from dusk
   addrMat.emissiveIntensity = night > 0.2 || el < 3 * deg ? 2.2 : 0.5; // street number lights up at dusk
 }
 function fmtHour(h) { const hh = Math.floor(h), mm = Math.round((h - hh) * 60); const ap = hh >= 12 ? 'pm' : 'am'; const h12 = ((hh + 11) % 12) + 1; return `${h12}:${String(mm).padStart(2, '0')} ${ap}`; }
@@ -1469,6 +1570,7 @@ function applyOpts() {
   // Through the pergola: the pergola turns 15 degrees about its centre so the cross path runs between two posts, not into one
   { const t = OPT.route.val === 'through' ? 15 * deg : 0, c = Math.cos(t), sn = Math.sin(t); Object.values(optGroups.pergola).flat().forEach(g => { g.rotation.y = t; g.position.set(C[0] - (C[0] * c + C[1] * sn), 0, C[1] - (-C[0] * sn + C[1] * c)); }); }
   document.querySelectorAll('#opts button').forEach(b => b.setAttribute('aria-pressed', OPT[b.dataset.k].val === b.dataset.v));
+  $('#litLegend').hidden = OPT.lights.val !== 'plan'; $('#irrLegend').hidden = OPT.irrig.val !== 'plan';
   try { const q = Object.entries(OPT).filter(([, o]) => o.val !== o.def).map(([k, o]) => k + '=' + o.val).join('&'); history.replaceState(null, '', q ? '#' + q : location.pathname + location.search); } catch (e) {}
 }
 (function buildOpts() {
