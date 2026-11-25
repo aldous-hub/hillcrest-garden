@@ -889,6 +889,7 @@ const P_ = G.prop;
 /* ---- design options: each choice is its own group, switched on and off ---- */
 const OPT = {
   pergola: { label: 'Pergola style', choices: [['timber', 'Timber (Rob)'], ['iron', 'Iron lace'], ['piers', 'Rendered piers'], ['steel', 'Slim steel']], def: 'iron' },
+  roof: { label: 'Pergola or rotunda', choices: [['open', 'Open pergola (Rob)'], ['small', 'Rotunda over the paving'], ['large', 'Rotunda to the ring']], def: 'open' }, // rotunda: a roofed, shaded version (Will, 25 Nov)
   corners: { label: 'Path corners', choices: [['square', 'Square (Rob)'], ['curved', 'Curved']], def: 'square' },
   hedge: { label: 'New box hedge height', choices: [['60', '60 cm'], ['90', '90 cm']], def: '60' },
   steppers: { label: 'Steppers', choices: [['pebble', 'Granite pebble'], ['blue', 'Bluestone']], def: 'pebble' },
@@ -904,6 +905,7 @@ Object.values(OPT).forEach(o => o.val = o.def);
 const optGroups = {};
 function optGroup(key, val, parent = P_) { const g = new THREE.Group(); parent.add(g); ((optGroups[key] ||= {})[val] ||= []).push(g); return g; }
 const pergMat = MAT.timber.clone();
+const RO = optGroup('roof', 'open'); // the open pergola styles sit inside this group, so a rotunda hides them
 const LR = optGroup('lawn', 'rob'), LD = optGroup('lawn', 'drive');
 const lawnPoly = [[19.38, 49.4], [23.18, 49.4], ...circle(C[0], C[1], 7.4, 48, -74.4 * deg, 72.8 * deg), [20.45, 63.6], ...circle(C[0], C[1], 3.65, 48, 101.7 * deg, -119.7 * deg)]; // brick-edged all round, runs up to the pergola's brick ring (Rob's plan)
 ground(lawnPoly, GL, MAT.lawn, LR, { layer: 1 });
@@ -923,7 +925,7 @@ lawnEdge([[23.2, 49.4], [26.1, 51.67]], LD, lawnDrive); // edge of the corner be
 ground(rect(26.1, 51.42, 27.5, 51.67), GL, MAT.brick, LD, { layer: 5 }); // closes the gap where the bay's corner is rounded
 ground([[20.2, lawnStreetY(20.2)], [31.95, lawnStreetY(31.95)], [31.95, lawnStreetY(31.95) + 0.25], [20.2, lawnStreetY(20.2) + 0.25]], GL, MAT.brick, LD, { layer: 2 }); // street-side brick edge, as Rob's
 ground(circle(C[0], C[1], 2.2), GL, MAT.crazy, P_, { layer: 3 });
-ground(circle(C[0], C[1], 3.45), GL, MAT.dg, P_, { layer: 1, holes: [circle(C[0], C[1], 2.2)] });
+ground(circle(C[0], C[1], 3.45), GL, MAT.agg, P_, { layer: 1, holes: [circle(C[0], C[1], 2.2)] });
 // Paths: the existing granite pebble mix (exposed aggregate), bordered with reclaimed red bricks.
 const BR = 0.25; // brick border each side of every path. Pebble width is PW, so every path is 1.23 m overall (Rob's plan)
 const PW = 0.73;
@@ -1069,12 +1071,12 @@ function lacePanel(a, b, yc, h, group) { const L = Math.hypot(b[0] - a[0], b[1] 
   const at = (a, r) => [C[0] + r * Math.cos(a), C[1] + r * Math.sin(a)];
   const ringAt = (r, h, ht, wt, m, g) => { const rg = circle(C[0], C[1], r, 24); wallLine(rg.concat([rg[0]]), h, ht, wt, m, g); };
   const rib = (a, r0, h0, r1, h1, curve, w, d, m, g) => { const n = curve ? 6 : 1; for (let i = 0; i < n; i++) { const u0 = i / n, u1 = (i + 1) / n; const hh = u => curve ? h0 + (h1 - h0) * Math.sin(u * Math.PI / 2) : h0 + (h1 - h0) * u; const p0 = at(a, r0 + (r1 - r0) * u0), p1 = at(a, r0 + (r1 - r0) * u1); beam(V(p0[0], p0[1], hh(u0)), V(p1[0], p1[1], hh(u1)), w, d, m, g, false); } };
-  { const g = optGroup('pergola', 'timber');
+  { const g = optGroup('pergola', 'timber', RO);
     posts.forEach((p, k) => { const a = angs[k]; box(p[0], p[1], GL, 0.13, 0.13, 2.6, pergMat, g); box(p[0], p[1], GL, 0.2, 0.2, 0.08, MAT.black, g, { cast: false });
       beam(V(C[0] + 3.75 * Math.cos(a), C[1] + 3.75 * Math.sin(a), top + 0.02), V(C[0] + 0.7 * Math.cos(a), C[1] + 0.7 * Math.sin(a), top + 0.42), 0.08, 0.2, pergMat, g); });
     wallLine([...posts, posts[0]], top - 0.12, 0.2, 0.12, pergMat, g);
     const ring = circle(C[0], C[1], 0.7, 12); wallLine(ring.concat([ring[0]]), top + 0.32, 0.18, 0.1, pergMat, g); }
-  { const g = optGroup('pergola', 'iron'); const colGeo = new THREE.CylinderGeometry(0.05, 0.06, 2.3, 12);
+  { const g = optGroup('pergola', 'iron', RO); const colGeo = new THREE.CylinderGeometry(0.05, 0.06, 2.3, 12);
     posts.forEach((p, k) => { const a = angs[k]; const c = new THREE.Mesh(colGeo, MAT.iron); c.position.set(p[0], GL + 0.15 + 1.15, p[1]); c.castShadow = true; g.add(c); box(p[0], p[1], GL, 0.17, 0.17, 0.18, MAT.iron, g);
       const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.06, 0.18, 10), MAT.iron); cap.position.set(p[0], top - 0.1, p[1]); g.add(cap);
       const tx = -Math.sin(a), ty = Math.cos(a); [1, -1].forEach(sg => { const b = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.42), MAT.bracket); b.position.set(p[0] + sg * tx * 0.23, top - 0.62, p[1] + sg * ty * 0.23); b.rotation.y = -Math.atan2(ty, tx); b.scale.x = -sg; g.add(b); });
@@ -1082,13 +1084,33 @@ function lacePanel(a, b, yc, h, group) { const L = Math.hypot(b[0] - a[0], b[1] 
       rib(a, 3.3, top, 0.42, top + 0.85, true, 0.05, 0.06, MAT.iron, g); });
     ringAt(3.3, top - 0.05, 0.08, 0.09, MAT.iron, g); ringAt(0.42, top + 0.8, 0.08, 0.05, MAT.iron, g);
     const fin = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.35, 10), MAT.iron); fin.position.set(C[0], top + 1.05, C[1]); g.add(fin); const ball = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), MAT.iron); ball.position.set(C[0], top + 0.88, C[1]); g.add(ball); }
-  { const g = optGroup('pergola', 'piers');
+  { const g = optGroup('pergola', 'piers', RO);
     posts.forEach((p, k) => { const a = angs[k]; box(p[0], p[1], GL, 0.44, 0.44, 0.3, MAT.render, g, { rotY: -a }); box(p[0], p[1], GL + 0.3, 0.34, 0.34, 2.06, MAT.render, g, { rotY: -a }); box(p[0], p[1], GL + 2.36, 0.44, 0.44, 0.1, MAT.cornice, g, { rotY: -a }); box(p[0], p[1], GL + 2.46, 0.38, 0.38, 0.06, MAT.cornice, g, { rotY: -a });
       rib(a, 3.45, top + 0.1, 0.6, top + 0.5, false, 0.05, 0.1, MAT.black, g); });
     ringAt(3.3, top - 0.08, 0.16, 0.07, MAT.black, g); ringAt(0.6, top + 0.44, 0.12, 0.06, MAT.black, g); ringAt(1.9, top + 0.3, 0.06, 0.04, MAT.black, g); }
-  { const g = optGroup('pergola', 'steel'); const st = mat(0x2f3133, { roughness: 0.5, metalness: 0.3 });
+  { const g = optGroup('pergola', 'steel', RO); const st = mat(0x2f3133, { roughness: 0.5, metalness: 0.3 });
     posts.forEach((p, k) => { const a = angs[k]; box(p[0], p[1], GL, 0.08, 0.08, 2.6, st, g, { rotY: -a }); rib(a, 3.4, top + 0.1, 0.55, top + 0.4, false, 0.03, 0.12, st, g); });
     ringAt(3.3, top - 0.1, 0.18, 0.06, st, g); ringAt(1.95, top + 0.2, 0.08, 0.04, st, g); ringAt(0.55, top + 0.34, 0.1, 0.05, st, g); }
+  // Rotunda (design option): the pergola roofed for shade. Iron lace posts and frieze like the verandah, under a bell roof of
+  // charcoal corrugated iron like the verandah roof. Small: 8 posts on the crazy paving's edge, roof over the paving only.
+  // Large: the pergola's 12-post circle, eaves out over the brick ring, covering the paving and the granite ring.
+  const rotunda = (key, n, rp, re, rise, a0) => { const g = optGroup('roof', key); const pa = [], pp = [];
+    for (let k = 0; k < n; k++) { const a = a0 + 2 * Math.PI * k / n; pa.push(a); pp.push(at(a, rp)); }
+    const colGeo = new THREE.CylinderGeometry(0.05, 0.06, 2.3, 12);
+    pp.forEach((p, k) => { const a = pa[k]; const c = new THREE.Mesh(colGeo, MAT.iron); c.position.set(p[0], GL + 1.3, p[1]); c.castShadow = true; g.add(c); box(p[0], p[1], GL, 0.17, 0.17, 0.18, MAT.iron, g);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.06, 0.18, 10), MAT.iron); cap.position.set(p[0], top - 0.1, p[1]); g.add(cap);
+      const tx = -Math.sin(a), ty = Math.cos(a); [1, -1].forEach(sg => { const b = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.42), MAT.bracket); b.position.set(p[0] + sg * tx * 0.23, top - 0.62, p[1] + sg * ty * 0.23); b.rotation.y = -Math.atan2(ty, tx); b.scale.x = -sg; g.add(b); });
+      lacePanel(p, pp[(k + 1) % n], top - 0.25, 0.36, g); });
+    wallLine([...pp, pp[0]], top - 0.06, 0.1, 0.1, MAT.iron, g);
+    const ep = pa.map(a => at(a, re / Math.cos(Math.PI / n))); wallLine([...ep, ep[0]], top - 0.12, 0.16, 0.04, MAT.trimDark, g); // fascia at the eaves
+    const prof = []; for (let i = 0; i <= 20; i++) { const s = i / 20; prof.push(new THREE.Vector2(Math.max(0.001, re / Math.cos(Math.PI / n) * (1 - s)), top + 0.04 + rise * (1 - Math.cos(Math.PI * Math.pow(s, 0.85))) / 2)); }
+    const tex = T.corr.clone(); tex.needsUpdate = true; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(Math.round(2 * Math.PI * re / 0.61), 1);
+    const rm = MAT.corr.clone(); rm.map = tex;
+    const roof = new THREE.Mesh(new THREE.LatheGeometry(prof, n, Math.PI / 2 - a0), rm); roof.position.set(C[0], 0, C[1]); roof.castShadow = true; roof.receiveShadow = true; g.add(roof);
+    const pk = top + 0.04 + rise; const ball = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), MAT.iron); ball.position.set(C[0], pk + 0.12, C[1]); g.add(ball);
+    const fin = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.45, 10), MAT.iron); fin.position.set(C[0], pk + 0.4, C[1]); g.add(fin); };
+  rotunda('small', 8, 2.1, 2.5, 1.6, -67.5 * deg); // posts sit off the centre line so the through path passes between them
+  rotunda('large', 12, 3.3, 3.65, 2.3, -90 * deg);
   const egg = new THREE.Group(); egg.position.set(21.75, GL + 1.35, 57.3);
   const [wc, wx] = cnv(64); wx.fillStyle = '#a5804f'; wx.fillRect(0, 0, 64, 64); for (let i = 0; i < 64; i += 8) for (let j = 0; j < 64; j += 8) { wx.fillStyle = ((i + j) / 8) % 2 ? '#c49d68' : '#8c6a40'; wx.fillRect(i, j, 8, 4); }
   const wt = toTex(wc); wt.repeat.set(10, 8);
@@ -1098,7 +1120,7 @@ function lacePanel(a, b, yc, h, group) { const L = Math.hypot(b[0] - a[0], b[1] 
   egg.rotation.y = Math.atan2(57.3 - 60, 21.75 - 26); optGroup('route', 'rob').add(egg);
   const eggT = egg.clone(); eggT.position.set(C[0] + 1.75, GL + 1.35, C[1] + 0.9); optGroup('route', 'through').add(eggT); // clear of the cross path, on the lawn side
   window.__eggs = [egg, eggT];
-  box(20.7, 55.35, GL, 0.45, 0.45, 0.45, MAT.timberLight, optGroup('route', 'rob')); box(22.35, 58.35, GL, 0.45, 0.45, 0.45, MAT.timberLight, optGroup('route', 'through'));
+  box(20.7, 55.35, GL, 0.45, 0.45, 0.45, MAT.timberLight, optGroup('route', 'rob')); { const tT = optGroup('route', 'through'); box(22.35, 58.35, GL, 0.45, 0.45, 0.45, MAT.timberLight, tT); window.__tableT = tT; }
 })();
 // steppers: down the west bed, then east towards the ring. Their corner turns square or on a curve with the Path corners option (Will's note)
 const stepperRects = [];
@@ -1576,7 +1598,8 @@ $('#keyCollapse').onclick = () => { if (innerWidth <= 760) { $('#key').classList
 function applyOpts() {
   Object.entries(optGroups).forEach(([k, vs]) => Object.entries(vs).forEach(([v, gs]) => gs.forEach(g => { g.visible = OPT[k].val === v; })));
   // Through the pergola: the pergola turns 15 degrees about its centre so the cross path runs between two posts, not into one
-  { const t = OPT.route.val === 'through' ? 15 * deg : 0, c = Math.cos(t), sn = Math.sin(t); Object.values(optGroups.pergola).flat().forEach(g => { g.rotation.y = t; g.position.set(C[0] - (C[0] * c + C[1] * sn), 0, C[1] - (-C[0] * sn + C[1] * c)); }); }
+  { const t = OPT.route.val === 'through' ? 15 * deg : 0, c = Math.cos(t), sn = Math.sin(t); Object.values(optGroups.pergola).flat().concat(optGroups.roof.large).forEach(g => { g.rotation.y = t; g.position.set(C[0] - (C[0] * c + C[1] * sn), 0, C[1] - (-C[0] * sn + C[1] * c)); }); }
+  { const s = OPT.roof.val === 'small'; window.__eggs[1].position.set(C[0] + (s ? 1.3 : 1.75), GL + 1.35, C[1] + (s ? 0.3 : 0.9)); window.__tableT.position.set(s ? 0.29 : 0, 0, s ? -2.57 : 0); } // inside the small rotunda's posts
   document.querySelectorAll('#opts button').forEach(b => b.setAttribute('aria-pressed', OPT[b.dataset.k].val === b.dataset.v));
   $('#litLegend').hidden = OPT.lights.val !== 'plan'; $('#irrLegend').hidden = OPT.irrig.val !== 'plan';
   try { const q = Object.entries(OPT).filter(([, o]) => o.val !== o.def).map(([k, o]) => k + '=' + o.val).join('&'); history.replaceState(null, '', q ? '#' + q : location.pathname + location.search); } catch (e) {}
