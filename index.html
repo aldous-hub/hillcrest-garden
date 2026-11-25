@@ -503,7 +503,7 @@ let frndImpl = mulberry32(7771); const frnd = () => frndImpl();
 // Extras that exist only in design options draw from their own streams, so everything else (Today included) keeps its exact look
 const GLOW = []; // additive light-pool materials, faded in at dusk
 function withRng(seed, fn) { const a = rndImpl, b = frndImpl; rndImpl = mulberry32(seed); frndImpl = mulberry32(seed + 1); try { return fn(); } finally { rndImpl = a; frndImpl = b; } }
-MAT.pavers = tmat(withRng(5150, () => { const [c, x] = cnv(256); noiseFill(x, 256, 256, [100, 146, 58], 24, [90, 136, 52]); specks(x, 256, 256, ['#7fa84e', '#557e36', '#6b9443'], 1400, 2); x.fillStyle = 'rgba(178,172,160,0.8)'; for (let i = 0; i < 256; i += 32) { x.fillRect(i, 0, 5, 256); x.fillRect(0, i, 256, 5); } return toTex(c); }), 1.2); // grass pavers: lawn over a faint concrete grid
+MAT.pavers = tmat(withRng(5150, () => { const [c, x] = cnv(256); noiseFill(x, 256, 256, [100, 146, 58], 24, [90, 136, 52]); specks(x, 256, 256, ['#7fa84e', '#557e36', '#6b9443'], 1400, 2); x.fillStyle = 'rgba(205,210,190,0.09)'; for (let i = 0; i < 256; i += 32) { x.fillRect(i, 0, 3, 256); x.fillRect(0, i, 256, 3); } return toTex(c); }), 1.0); // grass parking: lawn grown through a plastic cell grid (TRUEGRID style), the grid all but hidden (Will's note)
 const FR = (a, b) => a + (b - a) * frnd();
 function hash3(x, y, z) { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(z | 0, 1440662683); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 function vnoise(x, y, z) { const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), s = t => t * t * (3 - 2 * t); const u = s(x - xi), v = s(y - yi), w = s(z - zi); const c = (i, j, k) => hash3(xi + i, yi + j, zi + k);
@@ -894,7 +894,7 @@ const OPT = {
   steppers: { label: 'Steppers', choices: [['pebble', 'Granite pebble'], ['blue', 'Bluestone']], def: 'pebble' },
   steps: { label: 'Gate steps', choices: [['brick', 'Reclaimed brick'], ['blue', 'Bluestone']], def: 'brick' },
   lawn: { label: 'Front lawn', choices: [['rob', 'Half-moon (Rob)'], ['drive', 'To the driveway']], def: 'rob' },
-  bay: { label: 'Visitor parking bay', choices: [['rob', 'Parking (Rob)'], ['pavers', 'Grass pavers'], ['removed', 'Removed']], def: 'rob' },
+  bay: { label: 'Visitor parking bay', choices: [['rob', 'Parking (Rob)'], ['pavers', 'Grass parking'], ['removed', 'Removed']], def: 'pavers' }, // grass over a plastic grid, adopted from Will's note 25
   route: { label: 'Gate to front door', choices: [['rob', 'Round the pergola (Rob)'], ['through', 'Through the pergola']], def: 'rob' },
   bunya: { label: 'Bunya pine', choices: [['rob', 'Bunya (Rob)'], ['replaced', 'Smaller tree']], def: 'rob' },
   lights: { label: 'Garden lighting', choices: [['placeholder', 'Placeholder (current)'], ['plan', 'Lighting plan']], def: 'placeholder' },
@@ -1020,7 +1020,7 @@ ground(rect(26.5, 48.3, 33.08, 51.42), GL, MAT.agg, SQ, { layer: 3 }); // bay al
 ground([[26.5, 48.3], [33.08, 48.3], [33.08, 51.42], ...circle(27.5, 50.42, 1.0, 12, 90 * deg, 180 * deg)], GL, MAT.agg, CV, { layer: 3 }); // curved: its street-side corner rounded
 [[[33.0, 51.0], [39.0, 51.0], [39.0, 58.5], [34.85, 58.5], [33.04, 51.39]], [[39.0, 53.0], [40.35, 53.0], [40.45, 59.25], [39.0, 59.25]]].forEach(p => ground(p, GL, MAT.agg, P_, { layer: 2 }));
 ground([[40.35, 53.0], [southX(53.0) - 0.03, 53.0], [southX(59.25) - 0.03, 59.25], [40.45, 59.25]], GL, MAT.flag, P_, { layer: 2 }); // bluestone right up to the fence beside the bay
-{ const br = optGroup('bay', 'rob'), bp = optGroup('bay', 'pavers'); // visitor bay (design option): Rob's, grass pavers, or removed (bed or lawn)
+{ const br = optGroup('bay', 'rob'), bp = optGroup('bay', 'pavers'); // visitor bay (design option): Rob's, grass parking over a plastic grid (default, Will's note), or removed (bed or lawn)
   ground(visitorBay, GL, MAT.brick, br, { layer: 3 }); ground(visitorBayIn, GL, MAT.agg, br, { layer: 4 });
   ground(visitorBay, GL, MAT.brick, bp, { layer: 3 }); ground(visitorBayIn, GL, MAT.pavers, bp, { layer: 4 }); }
 ground(rect(26.27, 51.42, 33.1, 51.67), GL, MAT.brick, SQ, { layer: 4 }); ground(rect(26.27, 49.15, 26.52, 51.67), GL, MAT.brick, SQ, { layer: 4 }); // house-front bay's brick edge, continuing the path border
@@ -1393,6 +1393,7 @@ instanced(lightGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness:
       else { let k0 = inc.findIndex((v, k) => v && !inc[(k - 1 + n) % n]); if (k0 >= 0) { let k = k0; const pts = [[x, y]]; while (inc[k % n] && pts.length <= n) { const t = (k % n) / n * Math.PI * 2; pts.push([x + Math.cos(t) * A, y + Math.sin(t) * A]); k++; } ground(pts, GL + 0.04, om(Z.lawn, 0.45), g, { walk: false }).renderOrder = 19; } }
       disc(x, y, 0.14, Z.lawn, g); });
   });
+  { const g = optGroup('bay', 'pavers', LRg); ground(visitorBayIn, GL + 0.04, om(Z.lawn, 0.24), g, { walk: false }).renderOrder = 18; [[32.3, 54.3], [32.4, 57.2], [34.3, 57.6]].forEach(([x, y]) => disc(x, y, 0.14, Z.lawn, g)); } // grass parking is watered with the lawn
   // supply: assumed meter, mainline to the valve box at the bin area, sub-mains out to the zones, control cable to the garage
   const meter = [40.2, 62.6], valves = [34.0, 61.65];
   line([meter, [35.6, 62.95], valves], 0.1, Z.main, IG);
